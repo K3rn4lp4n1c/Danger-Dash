@@ -1,2 +1,2 @@
 ## Authors
-- Oluwajuwon Adedowole
+- Oluwajuwon Benjamin Adedowole
