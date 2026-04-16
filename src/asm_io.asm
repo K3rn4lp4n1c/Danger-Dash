@@ -37,7 +37,7 @@
   %define _getchar    getchar
   %define _putchar    putchar
   ; _scanf, _printf, are just scanf, printf, etc. without underscores so we don't have conflicts 
-  ; add more defines here for C functions to call from nasm
+  ; [NOOBS] add more defines here for C functions to call from nasm
   %define _helloWorld helloWorld
 %endif
 
@@ -49,7 +49,7 @@
   %define _printf     printf_
   %define _getchar    getchar_
   %define _putchar    putchar_
-  ; add more defines here for C functions to call from nasm
+  ; [NOOBS] add more defines here for C functions to call from nasm
   %define _helloWorld helloWorld_
 %endif
 
@@ -101,7 +101,7 @@ segment .text
         global  hello_world     ; add more nasm functions
         extern  _scanf, _printf, _getchar, _putchar
         ; from the %ifdef ELF_TYPE, this is just scanf, printf, etc. without underscores
-        extern  _helloWorld     ; add more C functions to call from nasm here
+        extern  _helloWorld     ; [NOOBS] add more C functions to call from nasm here
 
 ; function_name_in_assembly:
 ;         enter   0,0   ; Adjust this if you have local variables so the stack frame is big enough
@@ -114,7 +114,7 @@ segment .text
 ;         popa
 ;         leave
 ;         ret
-; add more nasm function definitions below that need to call C functions
+; [NOOBS] add more nasm function definitions below that need to call C functions
 
 hello_world:
         enter   0,0
