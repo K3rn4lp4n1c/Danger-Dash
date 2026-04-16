@@ -1,0 +1,37 @@
+name: Danger Dash Release CI
+
+on:
+  push:
+    tags:
+    - "v*"
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm gcc make gcc-multilib libc6-dev-i386 lib32gcc-s1
+
+    - name: Make the binary and check for errors
+      run: make test
+
+    - name: Create release
+      env:
+          GH_RELEASE_TOKEN: ${{ github.token }}
+      run: |
+        gh release create "${GITHUB_REF_NAME}" --verify-tag -p \
+            game.out \
+            --title "Danger Dash ${GITHUB_REF_NAME}" \
+            --notes "Automated Danger Dash ${GITHUB_REF_NAME} release"
