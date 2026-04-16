@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include "dan.h"
+#include "game.h"
 
 void helloWorld() {
-    printf("Hello, World!\n");
+    printf("%s\n", HELLO_WORLD_MSG);
     return;
 }
