@@ -26,7 +26,7 @@ jobs:
 
     - name: Create release
       env:
-          GH_RELEASE_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
       run: |
         gh release create "${GITHUB_REF_NAME}" --verify-tag -p \
             game.out \
