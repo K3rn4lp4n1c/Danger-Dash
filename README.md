@@ -1,4 +1,4 @@
-# 2D Runner Game (Assembly + C)
+# Danger Dash Assembly/C Game Project
 
 A Danger Dash-inspired 2D runner being planned for an Assembly class project.
 
