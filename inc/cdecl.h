@@ -1,3 +1,5 @@
+/* n00b5_d0_n0t_t0uch */
+
 #ifndef CDECL_HEADER_FILE
 #define CDECL_HEADER_FILE
 

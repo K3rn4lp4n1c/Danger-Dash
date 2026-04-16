@@ -1,3 +1,5 @@
+/* n00b5_d0_n0t_t0uch */
+
 #include "cdecl.h"
 
 int PRE_CDECL asm_main( void ) POST_CDECL;
