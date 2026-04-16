@@ -3,9 +3,7 @@ name: Danger Dash Release CI
 on:
   push:
     tags:
-    - "v*"
-    branches: [ "main" ]
-  pull_request:
+    - 'v*'
     branches: [ "main" ]
 
 permissions:
