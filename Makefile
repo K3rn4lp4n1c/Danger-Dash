@@ -10,7 +10,7 @@ NASM_FLAGS_32 := -f elf32 -d ELF_TYPE -g -F dwarf
 TARGET := $(PROJECT_NAME).out
 OBJS = asm_io.o driver.o $(PROJECT_NAME).o 
 
-.PHONY: all clean
+.PHONY: all clean test
 
 all: $(TARGET)
 
