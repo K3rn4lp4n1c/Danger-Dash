@@ -1,0 +1,26 @@
+name: Danger Dash Test CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm gcc make
+
+    - name: Install dependencies
+      run: make
+
+    - name: Run test
+      run: make test
