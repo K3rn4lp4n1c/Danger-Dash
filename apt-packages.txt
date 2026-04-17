@@ -1,0 +1,7 @@
+nasm
+gcc
+make
+gcc-multilib
+libc6-dev-i386
+lib32gcc-s1
+lib32ncurses-dev
