@@ -115,7 +115,6 @@ segment .text
 ;         leave
 ;         ret
 ; [NOOBS] add more nasm function definitions below that need to call C functions
-
 hello_world:
         enter   0,0
         pusha
