@@ -2,11 +2,11 @@
 
 #include "cdecl.h"
 
-int PRE_CDECL asm_main( void ) POST_CDECL;
+int PRE_CDECL asm_main( int argc, char* argv[] ) POST_CDECL;
 
-int main()
+int main(int argc, char *argv[])
 {
   int ret_status;
-  ret_status = asm_main();
+  ret_status = asm_main(argc, argv);
   return ret_status;
 }
