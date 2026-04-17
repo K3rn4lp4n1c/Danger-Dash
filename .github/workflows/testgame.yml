@@ -20,7 +20,7 @@ jobs:
     - name: Install build tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm gcc make gcc-multilib libc6-dev-i386 lib32gcc-s1
+        xargs -a apt-packages.txt -r sudo apt-get install -y
 
     - name: Install dependencies
       run: make
