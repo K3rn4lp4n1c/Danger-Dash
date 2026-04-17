@@ -11,6 +11,7 @@ NASM_FLAGS_32 := -f elf32 -d ELF_TYPE -g -F dwarf
 
 TARGET := $(PROJECT_NAME).out
 OBJS = asm_io.o driver.o $(PROJECT_NAME).o 
+LIBS = -lcurses
 
 .PHONY: all clean test
 
@@ -20,7 +21,7 @@ clean:
 >rm -rf $(TARGET) $(OBJS)
 
 $(TARGET): $(OBJS) $(INC_DIR)/$(PROJECT_NAME).h $(SRC_DIR)/$(PROJECT_NAME).c
->gcc $(CFLAGS) $^ -I $(INC_DIR) -o $@
+>gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $@
 
 $(PROJECT_NAME).o: $(SRC_DIR)/$(PROJECT_NAME).asm $(INC_DIR)/asm_io.inc
 >nasm $(NASM_FLAGS) $< -I $(INC_DIR) -o $@
