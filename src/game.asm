@@ -9,12 +9,13 @@ segment .bss
 
 segment .text
         global  asm_main
+        global check_for_collision
 
 asm_main:
         push    ebp
         mov     ebp, esp
         ; ********** CODE STARTS HERE **********
-        ; get argc and argv from the stack
+        ; get argc and argv from the stack and store them in argc and argv variables
         call    get_args
 
 asm_end:
@@ -49,4 +50,11 @@ help:
         ; Print help message to the console
         mov     eax, help_msg
         call    print_string
+        ret
+
+check_for_collision:
+        ; This function will check for collision between the player and obstacles
+        ; It will return 1 if there is a collision, 0 otherwise
+        ; For now, we will just return 0 (no collision)
+        xor     eax, eax
         ret

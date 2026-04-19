@@ -3,6 +3,7 @@
 #include "cdecl.h"
 
 int PRE_CDECL asm_main( int argc, char* argv[] ) POST_CDECL;
+int PRE_CDECL check_for_collision( int player_x, int player_y ) POST_CDECL;
 
 int main(int argc, char *argv[])
 {
