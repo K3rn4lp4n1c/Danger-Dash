@@ -3,6 +3,7 @@
         extern  sub_dump_regs, sub_dump_mem, sub_dump_math, sub_dump_stack
         ; exposes the read_int, print_int, etc. functions to files that include it
         extern  hello_world     ; [NOOBS] add more nasm functions to call from C here
+        extern init, update, run, displace, end, deinit 
 %macro  dump_regs 1
         push      dword %1
         call      sub_dump_regs
