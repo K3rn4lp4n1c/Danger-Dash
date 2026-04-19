@@ -20,14 +20,14 @@ all: $(TARGET)
 clean:
 >rm -rf $(TARGET) $(OBJS)
 
-$(TARGET): $(OBJS) $(INC_DIR)/$(PROJECT_NAME).h $(SRC_DIR)/$(PROJECT_NAME).c
+$(TARGET): $(OBJS) $(SRC_DIR)/$(PROJECT_NAME).c
 >gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $@
 
 $(PROJECT_NAME).o: $(SRC_DIR)/$(PROJECT_NAME).asm $(INC_DIR)/asm_io.inc
 >nasm $(NASM_FLAGS) $< -I $(INC_DIR) -o $@
 
-driver.o: $(SRC_DIR)/driver.c $(INC_DIR)/cdecl.h
->gcc $(CFLAGS) -c $< -I $(INC_DIR) -o $@
+driver.o: $(SRC_DIR)/driver.c
+>gcc $(CFLAGS) -c $< -I $(INC_DIR)
 
 asm_io.o: $(SRC_DIR)/asm_io.asm
 >nasm $(NASM_FLAGS_32) $< -I $(INC_DIR) -o $@
