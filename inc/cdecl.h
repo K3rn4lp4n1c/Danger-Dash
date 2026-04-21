@@ -26,5 +26,9 @@
 #  define POST_CDECL
 #endif
 
+#ifndef NASM_FUNCTIONS
+#define NASM_FUNCTIONS
+int check_for_collision( int player_x, int player_y );
+#endif
 
 #endif

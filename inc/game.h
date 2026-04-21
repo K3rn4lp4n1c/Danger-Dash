@@ -22,6 +22,11 @@ However, function definitions should go in the corresponding game.c file.
 #define GAME_TITLE "Danger Dash"
 #define GAME_VERSION "0.0.1-alpha"
 
+#ifndef NASM_FUNCTIONS
+#define NASM_FUNCTIONS
+int check_for_collision( int player_x, int player_y );
+#endif
+
 typedef enum { Benjamin, Ethan, Muhammad, } Characters;
 
 typedef struct {
@@ -45,10 +50,6 @@ typedef struct {
 
 Game* init();
 void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *), deinit(Game *);
-char32_t __resolveCharacter__(Characters character);
-
-#ifndef check_for_collision
-int check_for_collision(int player_x, int player_y);
-#endif
+char32_t __resolveCharacter__(Characters*);
 
 #endif

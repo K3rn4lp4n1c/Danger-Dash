@@ -35,8 +35,8 @@ Game* init() {
     return game;
 }
 
-char32_t __resolveCharacter__(Characters character) {
-    switch (character) {
+char32_t __resolveCharacter__(Characters *character) {
+    switch (*character) {
         case Benjamin: return U'B';
         case Ethan: return U'E';
         case Muhammad: return U'M';
