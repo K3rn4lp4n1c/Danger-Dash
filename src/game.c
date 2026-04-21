@@ -48,7 +48,7 @@ void update(Game *game) {
     /* Add more obstacles before printing game state based on player position */
     /* Also reduce the vertical distance of the player to simulate gravity */
     mvwprintw(game->environment->wstatus, 1, 1, "Score: %d", game->score);
-    mvwprintw(game->environment->wgame, game->player->y, game->player->x, "%lc", __resolveCharacter__(game->player->character));
+    mvwprintw(game->environment->wgame, game->player->y, game->player->x, "%lc", __resolveCharacter__(&(game->player->character)));
     mvwprintw(game->environment->winfo, 1, 1, "Player: %s", game->player->name);
 
     wrefresh(game->environment->wstatus);
