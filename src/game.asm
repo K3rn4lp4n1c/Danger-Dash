@@ -5,7 +5,8 @@ segment .data
 
 segment .bss
         argc resd 1
-        argv resq 1
+        argv resd 1
+        game resd 1 ; pointer to the game struct
 
 segment .text
         global  asm_main
@@ -57,8 +58,27 @@ game_main:
         ; This is the main function for the game logic
         ; It will initialize the game, run the game loop, and clean up resources
         call    init_game
+        mov     [game], eax ; store the game pointer returned by init_game
+        push    dword [game] ; push the game pointer as an argument to run_game
+        call    update_game
+        add     esp, 4 ; clean up the stack after the call
+
+game_end:
+        ; Clean up resources and exit the game
+        mov     eax, [game]
+        push    eax ; push the game pointer as an argument to end_game
+        call    end_game
+        mov     eax, [game]
+        push    eax ; push the game pointer as an argument to deinit_game
         call    deinit_game
-        ret
+
+.await_game_start_or_quit:
+        call    curses_getch
+        cmp     al, 'q' ; check if the user wants to quit
+        je      game_end
+        cmp     al, ' ' ; check if the user wants to start the game
+        je      run_game
+        jmp     .await_game_start_or_quit
 
 check_for_collision:
         ; This function will check for collision between the player and obstacles

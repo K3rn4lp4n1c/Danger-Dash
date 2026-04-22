@@ -46,18 +46,19 @@ Game* init() {
         player->character = Benjamin;
         game->players[i] = player;
     }
+    printf("Game initialized with %p player(s)\n", game);
     
-    while (1) {
-        update(game);
-        int ch = getch();
-        switch (ch) {
-            case ' ':
-                return game; // Start the game loop
-            case 'q':
-                end(game);
-                deinit(game);
-        }
-    }
+    // while (1) {
+    //     update(game);
+    //     int ch = getch();
+    //     switch (ch) {
+    //         case ' ':
+    //             return game; // Start the game loop
+    //         case 'q':
+    //             end(game);
+    //             deinit(game);
+    //     }
+    // }
     return game;
 }
 
@@ -73,6 +74,7 @@ char32_t __resolveCharacter__(Characters *character) {
 void update(Game *game) {
     /* Add more obstacles before printing game state based on player position */
     /* Also reduce the vertical distance of the player to simulate gravity */
+    printf("Updating game state for %p player(s)\n", game);
     __clear_all_windows__(game);
     if (game->environment->seed != 0) {
         int wgame_height = getmaxy(game->environment->wgame);
@@ -205,7 +207,7 @@ void end(Game *game) {
     // Placeholder for any end-of-game logic, such as displaying a game over screen
     __clear_all_windows__(game);
     mvwprintw(game->environment->wstatus, 1, 1, "Game Over! Final Score");
-    for (int i = 0; i < game->player_count; i++) {
+    for(int i = 0; i < game->player_count; i++) {
         mvwprintw(game->environment->wstatus, 2 + i, 1, "%s: %d", game->players[i]->name, game->players[i]->score);
     }
     __refresh_all_windows__(game);
