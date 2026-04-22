@@ -17,6 +17,7 @@ asm_main:
         ; ********** CODE STARTS HERE **********
         ; get argc and argv from the stack and store them in argc and argv variables
         call    get_args
+        call    game_main
 
 asm_end:
         ; *********** CODE ENDS HERE ***********
@@ -50,6 +51,13 @@ help:
         ; Print help message to the console
         mov     eax, help_msg
         call    print_string
+        ret
+
+game_main:
+        ; This is the main function for the game logic
+        ; It will initialize the game, run the game loop, and clean up resources
+        call    init_game
+        call    deinit_game
         ret
 
 check_for_collision:

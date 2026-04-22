@@ -110,7 +110,8 @@ segment .text
         global  print_char, print_nl, sub_dump_regs, sub_dump_mem
         global  sub_dump_math, sub_dump_stack
         ; exposes the read_int, print_int, etc. functions to game.asm
-        global  hello_world     ; add more nasm functions
+        global  hello_world     ; [NOOBS] add more NASM functions to call from C here
+        global  init_game, update_game, run_game, end_game, deinit_game
         extern  _scanf, _printf, _getchar, _putchar
         ; from the %ifdef ELF_TYPE, this is just scanf, printf, etc. without underscores
         extern  _helloWorld     ; [NOOBS] add more C functions to call from nasm here
@@ -128,7 +129,7 @@ segment .text
 ;         leave
 ;         ret
 ; [NOOBS] add more nasm function definitions below that need to call C functions
-initialize_game:
+init_game:
         enter   0,0
         pusha
         pushf
@@ -188,7 +189,7 @@ end_game:
         leave
         ret
 
-deinitialize_game:
+deinit_game:
         enter   0,0
         pusha
         pushf

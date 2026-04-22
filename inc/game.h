@@ -21,6 +21,8 @@ However, function definitions should go in the corresponding game.c file.
 #define WELCOME_MSG "Hello World!"
 #define GAME_TITLE "Danger Dash"
 #define GAME_VERSION "0.0.1-alpha"
+#define MAX_PLAYERS 4
+#define MAX_NAME_LENGTH 20
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
@@ -30,8 +32,9 @@ int check_for_collision( int player_x, int player_y );
 typedef enum { Benjamin, Ethan, Muhammad, } Characters;
 
 typedef struct {
-    char name[10];
+    char name[MAX_NAME_LENGTH];
     int x, y;
+    int score;
     Characters character;
     pthread_t keystroke;
 } Player;
@@ -40,16 +43,22 @@ typedef struct {
     WINDOW *wstatus;
     WINDOW *wgame;
     WINDOW *winfo;
+    char **map;
+    time_t seed;
 } Environment;
 
 typedef struct {
-    int score;
-    Player *player;
+    int player_count;
+    Player *players[MAX_PLAYERS];
     Environment *environment;
 } Game;
 
+// Available functions to be called from NASM assembly
 Game* init();
 void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *), deinit(Game *);
+
+// Internal helper functions
+void __clear_all_windows__(Game *game), __refresh_all_windows__(Game *game);
 char32_t __resolveCharacter__(Characters*);
 
 #endif
