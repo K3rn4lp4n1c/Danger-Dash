@@ -38,13 +38,14 @@
   %define _putchar    putchar
   ; _scanf, _printf, are just scanf, printf, etc. without underscores so we don't have conflicts 
   ; [NOOBS] add more defines here for C functions to call from nasm
-  %define _init       init
-  %define _update     update
-  %define _run        run
-  %define _displace   displace
-  %define _end        end
-  %define _deinit     deinit
-  %define _helloWorld helloWorld
+  %define _init         init
+  %define _update       update
+  %define _run          run
+  %define _displace     displace
+  %define _end          end
+  %define _deinit       deinit
+  %define _curses_getch getch
+  %define _helloWorld   helloWorld
 %endif
 
 ;
@@ -56,13 +57,14 @@
   %define _getchar    getchar_
   %define _putchar    putchar_
   ; [NOOBS] add more defines here for C functions to call from nasm
-  %define _init       init_
-  %define _update     update_
-  %define _run        run_
-  %define _displace   displace_
-  %define _end        end_
-  %define _deinit     deinit_
-  %define _helloWorld helloWorld_
+  %define _init         init_
+  %define _update       update_
+  %define _run          run_
+  %define _displace     displace_
+  %define _end          end_
+  %define _deinit       deinit_
+  %define _curses_getch getch_
+  %define _helloWorld   helloWorld_
 %endif
 
 %ifdef OBJ_TYPE
@@ -110,106 +112,117 @@ segment .text
         global  print_char, print_nl, sub_dump_regs, sub_dump_mem
         global  sub_dump_math, sub_dump_stack
         ; exposes the read_int, print_int, etc. functions to game.asm
-        global  hello_world     ; add more nasm functions
+        global  hello_world     ; [NOOBS] add more NASM functions to call from C here
+        global  init_game, update_game, run_game, end_game, deinit_game, curses_getch
         extern  _scanf, _printf, _getchar, _putchar
         ; from the %ifdef ELF_TYPE, this is just scanf, printf, etc. without underscores
         extern  _helloWorld     ; [NOOBS] add more C functions to call from nasm here
-        extern  _init, _update, _run, _displace, _end, _deinit
+        extern  _init, _update, _run, _displace, _end, _deinit, _curses_getch
 
-; function_name_in_assembly:
-;         enter   0,0   ; Adjust this if you have local variables so the stack frame is big enough
-;         pusha
-;         pushf
+; function_name_in_assembly_that returns Game*:
+;       push    ebp
+;       mov     ebp, esp
+;       call    _function_name_in_C
+;       mov     esp, ebp
+;       pop     ebp
+;       ret
 
-;         call    _functionNameFromC
+; function_name_in_assembly_that takes Game* as an argument:
+;       push    ebp
+;       mov     ebp, esp
+;       push    dword [ebp+8] ; push the Game* argument onto the stack
+;       call    _function_name_in_C
+;       add     esp, 4 ; clean up the stack after the call
+;       mov     esp, ebp
+;       pop     ebp
+;       ret
 
-;         popf
-;         popa
-;         leave
-;         ret
 ; [NOOBS] add more nasm function definitions below that need to call C functions
-initialize_game:
-        enter   0,0
-        pusha
-        pushf
-
+init_game:
+        push    ebp
+        mov     ebp, esp
         call    _init
-
-        popf
-        popa
-        leave
+        mov     esp, ebp
+        pop     ebp
         ret
 
-update_game:
-        enter   0,0
-        pusha
-        pushf
-
-        call    _update
-
-        popf
-        popa
-        leave
-        ret
-
-run_game:
-        enter   0,0
-        pusha
-        pushf
-
-        call    _run
-
-        popf
-        popa
-        leave
+curses_getch:
+        push    ebp
+        mov     ebp, esp
+        call    _curses_getch
+        mov     esp, ebp
+        pop     ebp
         ret
 
 move_player:
-        enter   0,0
-        pusha
-        pushf
+        push    ebp
+        mov     ebp, esp
 
+        push    dword [ebp+8] ; game pointer
+        push    dword [ebp+12] ; direction
         call    _displace
+        add     esp, 8
 
-        popf
-        popa
-        leave
+        mov     esp, ebp
+        pop     ebp
+        ret
+
+update_game:
+        push    ebp
+        mov     ebp, esp
+
+        push    dword [ebp+8]
+        call    _update
+        add     esp, 4
+
+        mov     esp, ebp
+        pop     ebp
+        ret
+
+run_game:
+        push    ebp
+        mov     ebp, esp
+
+        push    dword [ebp+8]
+        call    _run
+        add     esp, 4
+
+        mov     esp, ebp
+        pop     ebp
         ret
 
 end_game:
-        enter   0,0
-        pusha
-        pushf
+        push    ebp
+        mov     ebp, esp
 
+        push    dword [ebp+8]
         call    _end
+        add     esp, 4
 
-        popf
-        popa
-        leave
+        mov     esp, ebp
+        pop     ebp
         ret
 
-deinitialize_game:
-        enter   0,0
-        pusha
-        pushf
+deinit_game:
+        push    ebp
+        mov     ebp, esp
 
+        push    dword [ebp+8]
         call    _deinit
+        add     esp, 4
 
-        popf
-        popa
-        leave
+        mov     esp, ebp
+        pop     ebp
         ret
 
 hello_world:
-        enter   0,0
-        pusha
-        pushf
+        push    ebp
+        mov     ebp, esp
 
         call    _helloWorld
 
-        popf
-        popa
-        leave
+        mov     esp, ebp
+        pop     ebp
         ret
 
 read_int:
