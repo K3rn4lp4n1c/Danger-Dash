@@ -19,7 +19,7 @@ Game* init() {
     env->wstatus = wstatus;
     env->wgame = wgame;
     env->winfo = winfo;
-    env->frame_rate = 60000; // ~10ms per frame
+    env->frame_rate = INITIAL_FRAME_RATE;
     env->map = NULL;
     int wgame_height = getmaxy(wgame);
     int wgame_width = getmaxx(wgame);
@@ -67,12 +67,10 @@ void update(Game *game) {
     else __show_initial_screen__(game->env, wgame_height, wgame_width);
     for (int i = 0; i < game->player_count; i++) {
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->players[i]->score);
-        mvwprintw(game->env->wgame, game->players[i]->y, game->players[i]->x, "%lc", __resolveCharacter__(&(game->players[i]->character)));
+        mvwaddch(game->env->wgame, game->players[i]->y, game->players[i]->x, __resolveCharacter__(&(game->players[i]->character)));
     }
 
     __refresh_all_windows__(game);
-
-    refresh();
 }
 
 void run(Game *game) {
@@ -85,6 +83,8 @@ void run(Game *game) {
     for (int i = 0; i < game->player_count; i++) {
         mvwprintw(game->env->winfo, 1, 1, "Player: %s", game->players[i]->name); 
     }
+    box(game->env->wstatus, 0, 0);
+    box(game->env->winfo, 0, 0);
 
     while (1) {
         update(game);
@@ -153,11 +153,10 @@ void __clear_all_windows__(Game *game) {
 }
 
 void __refresh_all_windows__(Game *game) {
-    box(game->env->wstatus, 0, 0);
-    wrefresh(game->env->wstatus);
-    wrefresh(game->env->wgame);
-    box(game->env->winfo, 0, 0);
-    wrefresh(game->env->winfo);
+    wnoutrefresh(game->env->wstatus);
+    wnoutrefresh(game->env->wgame);
+    wnoutrefresh(game->env->winfo);
+    doupdate();
 }
 
 void __start_curses_colors__() {
@@ -218,10 +217,10 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
         }
         game->env->map[i][wgame_width - 1] = ' ';
     }
-    if ((double)rand() / RAND_MAX > (double)OBSTACLE_ODDS) return; // skip placement
+    double r = (double)rand() / RAND_MAX;
 
     int obstacle_type = rand() % 3; // 0 = mixed, 1 = air, 2 = land
-    if (obstacle_type == 0) {
+    if (r < (double)OBSTACLE_ODDS && obstacle_type == 0) {
         // mixed obstacle
         int obstacle_placement = rand() % 2; // 0 = middle, 1 = bottom
         if (obstacle_placement == 0) {
@@ -237,13 +236,13 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
                 game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
             }
         }
-    } else if (obstacle_type == 1) {
+    } else if (r < (double)OBSTACLE_ODDS && obstacle_type == 1) {
         // air obstacle
         int middle_y = wgame_height / 2;
         for (int i = 0; i < game->player_count; i++) {
             game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
         }
-    } else {
+    } else if (r < (double)OBSTACLE_ODDS && obstacle_type == 2) {
         // land obstacle
         int bottom_y = wgame_height - 1; // -2 to account for box borders
         for (int i = 0; i < game->player_count; i++) {
@@ -252,7 +251,7 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
     }
     for (int i = 0; i < wgame_height; i++) {
         for (int j = 0; j < wgame_width; j++) {
-            mvwprintw(game->env->wgame, i, j, "%c", game->env->map[i][j]);
+            mvwaddch(game->env->wgame, i, j, game->env->map[i][j]);
         }
     }
 }
