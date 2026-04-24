@@ -23,7 +23,6 @@ However, function definitions should go in the corresponding game.c file.
 #define GAME_VERSION "0.0.1-alpha"
 #define MAX_PLAYERS 4
 #define MAX_NAME_LENGTH 20
-#define OBSTACLE_ODDS 5 
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
@@ -33,6 +32,7 @@ int check_for_collision( int player_x, int player_y );
 typedef enum { Benjamin, Ethan, Muhammad, } Characters;
 
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
+const double OBSTACLE_ODDS = 0.1; // 10% chance of new obstacle each frame
 
 typedef struct {
     char name[MAX_NAME_LENGTH];
@@ -63,8 +63,8 @@ void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *),
 
 // Internal helper functions
 void __clear_all_windows__(Game *), __refresh_all_windows__(Game *);
-void __start_curses_colors__(), __show_initial_screen__(Environment *);
-void __place_obstacle__(Game *, int, int);
+void __start_curses_colors__();
+void __show_initial_screen__(Environment *, int, int), __adjust_map__(Game *, int, int);
 char32_t __resolveCharacter__(Characters*);
 
 #endif

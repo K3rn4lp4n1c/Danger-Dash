@@ -19,7 +19,7 @@ Game* init() {
     env->wstatus = wstatus;
     env->wgame = wgame;
     env->winfo = winfo;
-    env->frame_rate = 1000; // ~10ms per frame
+    env->frame_rate = 60000; // ~10ms per frame
     env->map = NULL;
     int wgame_height = getmaxy(wgame);
     int wgame_width = getmaxx(wgame);
@@ -61,21 +61,10 @@ char32_t __resolveCharacter__(Characters *character) {
 }
 
 void update(Game *game) {
-    werase(game->env->wstatus);
-    werase(game->env->winfo);
-    if (game->env->seed != 0) {
-        if (rand() % 100 < OBSTACLE_ODDS) {
-            int wgame_height = getmaxy(game->env->wgame);
-            int wgame_width = getmaxx(game->env->wgame);
-            __place_obstacle__(game, wgame_height, wgame_width);
-            for (int i = 0; i < wgame_height; i++) {
-                for (int j = 0; j < wgame_width; j++) {
-                    mvwprintw(game->env->wgame, i, j, "%c", game->env->map[i][j]);
-                }
-            }
-        }
-    } else __show_initial_screen__(game->env);
-    
+    int wgame_height = getmaxy(game->env->wgame);
+    int wgame_width = getmaxx(game->env->wgame);
+    if (game->env->seed != 0) __adjust_map__(game, wgame_height, wgame_width);
+    else __show_initial_screen__(game->env, wgame_height, wgame_width);
     for (int i = 0; i < game->player_count; i++) {
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->players[i]->score);
         mvwprintw(game->env->wgame, game->players[i]->y, game->players[i]->x, "%lc", __resolveCharacter__(&(game->players[i]->character)));
@@ -164,8 +153,10 @@ void __clear_all_windows__(Game *game) {
 }
 
 void __refresh_all_windows__(Game *game) {
+    box(game->env->wstatus, 0, 0);
     wrefresh(game->env->wstatus);
     wrefresh(game->env->wgame);
+    box(game->env->winfo, 0, 0);
     wrefresh(game->env->winfo);
 }
 
@@ -181,9 +172,7 @@ void __start_curses_colors__() {
     }
 }
 
-void __show_initial_screen__(Environment *env) {
-    int wgame_height = getmaxy(env->wgame);
-    int wgame_width = getmaxx(env->wgame);
+void __show_initial_screen__(Environment *env, int wgame_height, int wgame_width) {
     for (int i = 0; i < wgame_height; i++) {
         for (int j = 0; j < wgame_width; j++) {
             env->map[i][j] = ' ';
@@ -219,10 +208,9 @@ void __show_initial_screen__(Environment *env) {
     if (has_colors()) wattroff(env->wgame, COLOR_PAIR(3) | A_BOLD);
 
     mvwprintw(env->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
-    wrefresh(env->wgame);
 }
 
-void __place_obstacle__(Game *game, int wgame_height, int wgame_width) {
+void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
     // shift all existing obstacles to the left
     for (int i = 0; i < wgame_height; i++) {
         for (int j = 0; j < wgame_width - 1; j++) {
@@ -230,6 +218,8 @@ void __place_obstacle__(Game *game, int wgame_height, int wgame_width) {
         }
         game->env->map[i][wgame_width - 1] = ' ';
     }
+    if ((double)rand() / RAND_MAX > (double)OBSTACLE_ODDS) return; // skip placement
+
     int obstacle_type = rand() % 3; // 0 = mixed, 1 = air, 2 = land
     if (obstacle_type == 0) {
         // mixed obstacle
@@ -242,7 +232,7 @@ void __place_obstacle__(Game *game, int wgame_height, int wgame_width) {
             }
         } else {
             // Place obstacle at the bottom row of the last column
-            int bottom_y = wgame_height - 2; // -2 to account for box borders
+            int bottom_y = wgame_height - 1; // -2 to account for box borders
             for (int i = 0; i < game->player_count; i++) {
                 game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
             }
@@ -255,9 +245,14 @@ void __place_obstacle__(Game *game, int wgame_height, int wgame_width) {
         }
     } else {
         // land obstacle
-        int bottom_y = wgame_height - 2; // -2 to account for box borders
+        int bottom_y = wgame_height - 1; // -2 to account for box borders
         for (int i = 0; i < game->player_count; i++) {
             game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][2];
+        }
+    }
+    for (int i = 0; i < wgame_height; i++) {
+        for (int j = 0; j < wgame_width; j++) {
+            mvwprintw(game->env->wgame, i, j, "%c", game->env->map[i][j]);
         }
     }
 }
