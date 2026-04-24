@@ -54,7 +54,7 @@ typedef struct {
 typedef struct {
     int player_count;
     Player *players[MAX_PLAYERS];
-    Environment *environment;
+    Environment *env;
 } Game;
 
 // Available functions to be called from NASM assembly
