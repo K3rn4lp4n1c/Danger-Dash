@@ -11,7 +11,6 @@ Game* init() {
     box(wstatus, 0, 0);
     
     WINDOW *wgame = newwin(LINES/3, COLS, LINES / 3, 0);
-
     WINDOW *winfo = newwin(LINES/3, COLS, 2 * LINES / 3, 0);
     box(winfo, 0, 0);
 
@@ -31,9 +30,8 @@ Game* init() {
 
     Game *game = malloc(sizeof(Game));
     game->environment = env;
-    game->player_count = 1; // for now, we'll have just one player
+    game->player_count = 1;
     for (int i = 0; i < 4; i++) game->players[i] = NULL;
-    
 
     for (int i = 0; i < game->player_count; i++) {
         Player *player = malloc(sizeof(Player));
@@ -44,6 +42,15 @@ Game* init() {
         player->y = 1;
         player->score = 0;
         player->character = Benjamin;
+
+        // Initialize input flags to zero and set up the mutex
+        player->inputState.up    = 0;
+        player->inputState.down  = 0;
+        player->inputState.left  = 0;
+        player->inputState.right = 0;
+        player->inputState.quit  = 0;
+        pthread_mutex_init(&player->inputState.lock, NULL);
+
         game->players[i] = player;
     }
     
@@ -60,22 +67,20 @@ char32_t __resolveCharacter__(Characters *character) {
 }
 
 void update(Game *game) {
-    /* Add more obstacles before printing game state based on player position */
-    /* Also reduce the vertical distance of the player to simulate gravity */
     __clear_all_windows__(game);
     if (game->environment->seed != 0) {
         int wgame_height = getmaxy(game->environment->wgame);
         int wgame_width = getmaxx(game->environment->wgame);
         for (int i = 0; i < wgame_height; i++) {
             for (int j = 0; j < wgame_width; j++) {
-                if (rand() % 100 < 5) { // 5% chance to place an obstacle
+                if (rand() % 100 < 5) {
                     game->environment->map[i][j] = '#';
                 } else {
                     game->environment->map[i][j] = ' ';
                 }
             }
         }
-        usleep(100000); // Sleep for 100ms to control game speed
+        usleep(100000);
     } else {
         int wgame_height = getmaxy(game->environment->wgame);
         int wgame_width = getmaxx(game->environment->wgame);
@@ -122,6 +127,7 @@ void update(Game *game) {
 
         mvwprintw(game->environment->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
     }
+
     for (int i = 0; i < game->player_count; i++) {
         mvwprintw(game->environment->wstatus, 1, 1, "Score: %d", game->players[i]->score);
         mvwprintw(game->environment->wgame, game->players[i]->y, game->players[i]->x, "%lc", __resolveCharacter__(&(game->players[i]->character)));
@@ -129,69 +135,107 @@ void update(Game *game) {
     }
 
     __refresh_all_windows__(game);
-
     refresh();
 }
 
+/*
+ * run - called by assembly when SPACE is pressed.
+ * Spawns one input_thread per player, then runs the game loop on the main thread.
+ * Main thread calls apply_input() + update() each frame.
+ * When quit flag is set, joins all input threads cleanly before returning.
+ */
 void run(Game *game) {
+    // Spawn one input thread per player
     for (int i = 0; i < game->player_count; i++) {
-        pthread_create(&(game->players[i]->keystroke), NULL, (void *)displace, (void *)&(game->players[i]));
+        pthread_create(&(game->players[i]->keystroke), NULL, input_thread, (void *)game->players[i]);
     }
+
     game->environment->seed = time(NULL);
     srand(game->environment->seed);
-    
-    while ((1) != ESRCH) {
-        update(game);
+
+    // Game loop on main thread
+    int running = 1;
+    while (running) {
+        apply_input(game);  // read flags from input thread, move players
+        update(game);       // render
+
+        // Check if any player pressed Q
         for (int i = 0; i < game->player_count; i++) {
-            if (check_for_collision(game->players[i]->x, game->players[i]->y)) {
-                // Handle collision
-                break;
-            }
+            pthread_mutex_lock(&game->players[i]->inputState.lock);
+            if (game->players[i]->inputState.quit) running = 0;
+            pthread_mutex_unlock(&game->players[i]->inputState.lock);
         }
-        int inactive_players = 0;
-        for (int i = 0; i < game->player_count; i++) {
-            if (pthread_kill(game->players[i]->keystroke, 0) == 0) {
-                pthread_join(game->players[i]->keystroke, NULL);
-                inactive_players++;
-            }
-        }
-        if (inactive_players == game->player_count) {
-            break; // All players are inactive, end the game loop
-        }
+    }
+
+    // Signal input threads to stop and wait for them
+    for (int i = 0; i < game->player_count; i++) {
+        pthread_mutex_lock(&game->players[i]->inputState.lock);
+        game->players[i]->inputState.quit = 1;
+        pthread_mutex_unlock(&game->players[i]->inputState.lock);
+        pthread_join(game->players[i]->keystroke, NULL);
+        pthread_mutex_destroy(&game->players[i]->inputState.lock);
     }
 }
 
-void displace(Player *player) {
+/*
+ * input_thread - runs on a dedicated thread, one per player.
+ * Only job: read a key, lock mutex, set the right flag, unlock.
+ * Never touches x/y - that belongs to apply_input on the main thread.
+ */
+void *input_thread(void *arg) {
+    Player *player = (Player *)arg;
+
     while (1) {
-        int keystroke = getch();
-            switch (keystroke) {
-            // directional keys (WASD or arrow keys)
-            case 'w':
-            case KEY_UP:
-                player->y = (player->y > 1) ? player->y - 1 : player->y;
-                continue;
-            case 's':
-            case KEY_DOWN:
-                player->y = (player->y < LINES - 2) ? player->y + 1 : player->y;
-                continue;
-            case 'a':
-            case KEY_LEFT:
-                player->x = (player->x > 1) ? player->x - 1 : player->x;
-                continue;
-            case 'd':
-            case KEY_RIGHT:
-                player->x = (player->x < COLS - 2) ? player->x + 1 : player->x;
-                continue;
-            case 'q':
-                // Exit the game loop
-                pthread_exit(NULL);
+        int key = getch();  // blocks waiting for a keypress
+
+        pthread_mutex_lock(&player->inputState.lock);
+        switch (key) {
+            case 'w': case KEY_UP:    player->inputState.up    = 1; break;
+            case 's': case KEY_DOWN:  player->inputState.down  = 1; break;
+            case 'a': case KEY_LEFT:  player->inputState.left  = 1; break;
+            case 'd': case KEY_RIGHT: player->inputState.right = 1; break;
+            case 'q':                 player->inputState.quit  = 1; break;
             default: break;
         }
+        int should_quit = player->inputState.quit;
+        pthread_mutex_unlock(&player->inputState.lock);
+
+        if (should_quit) break;
     }
+    return NULL;
+}
+
+/*
+ * apply_input - called once per frame by the game loop (main thread).
+ * Reads flags written by input_thread, moves the player, then clears the flags.
+ * x/y is only ever written here - no race condition on position.
+ */
+void apply_input(Game *game) {
+    int h = getmaxy(game->environment->wgame);
+    int w = getmaxx(game->environment->wgame);
+
+    for (int i = 0; i < game->player_count; i++) {
+        Player *p = game->players[i];
+
+        pthread_mutex_lock(&p->inputState.lock);
+        if (p->inputState.up)    { p->y = (p->y > 1)   ? p->y-1 : p->y; p->inputState.up    = 0; }
+        if (p->inputState.down)  { p->y = (p->y < h-2) ? p->y+1 : p->y; p->inputState.down  = 0; }
+        if (p->inputState.left)  { p->x = (p->x > 1)   ? p->x-1 : p->x; p->inputState.left  = 0; }
+        if (p->inputState.right) { p->x = (p->x < w-2) ? p->x+1 : p->x; p->inputState.right = 0; }
+        pthread_mutex_unlock(&p->inputState.lock);
+    }
+}
+
+/*
+ * displace - STUB only. asm_io.asm declares this as extern so it must exist.
+ * The actual input logic is in input_thread() and apply_input() above.
+ * Do not delete this.
+ */
+void displace(Player *player) {
+    (void)player;
 }
 
 void end(Game *game) {
-    // Placeholder for any end-of-game logic, such as displaying a game over screen
     __clear_all_windows__(game);
     mvwprintw(game->environment->wstatus, 1, 1, "Game Over! Final Score");
     for(int i = 0; i < game->player_count; i++) {
@@ -206,7 +250,6 @@ void deinit(Game *game) {
     delwin(game->environment->wstatus);
     delwin(game->environment->wgame);
     delwin(game->environment->winfo);
-
     free(game);
     endwin();
     exit(0);
@@ -224,10 +267,8 @@ void __refresh_all_windows__(Game *game) {
     wrefresh(game->environment->winfo);
 }
 
-// A simple function to demonstrate calling a C function from NASM assembly
 void helloWorld() {
     initscr(); curs_set(0); noecho();
-
     WINDOW *wlcm_win = newwin(10, 2 * COLS / 3, 0, 0);
     mvwin(wlcm_win, (LINES - getmaxy(wlcm_win)) / 2, (COLS - getmaxx(wlcm_win)) / 2);
     if (has_colors()) {
@@ -235,24 +276,17 @@ void helloWorld() {
         init_pair(1, COLOR_RED, COLOR_BLACK);
         init_pair(2, COLOR_GREEN, COLOR_BLACK);
     }
-
     wattron(wlcm_win, COLOR_PAIR(1));
     mvwprintw(wlcm_win, getmaxy(wlcm_win)/2 - 1, (getmaxx(wlcm_win) - strlen(WELCOME_MSG)) / 2, "%s", WELCOME_MSG);
     wattroff(wlcm_win, COLOR_PAIR(1));
-
     char game_info[100];
     snprintf(game_info, sizeof(game_info), "%s %s %d", GAME_TITLE, GAME_VERSION, 2024);
     wattron(wlcm_win, COLOR_PAIR(2));
     mvwprintw(wlcm_win, getmaxy(wlcm_win)/2 + 1, (getmaxx(wlcm_win) - strlen(game_info)) / 2, "%s", game_info);
     wattroff(wlcm_win, COLOR_PAIR(2));
-
     refresh();
     wrefresh(wlcm_win);
-    
     getch();
-
     delwin(wlcm_win);
     endwin();
 }
-
-// You can add more game-related functions here that can be called from assembly or other C files

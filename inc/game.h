@@ -31,12 +31,21 @@ int check_for_collision( int player_x, int player_y );
 
 typedef enum { Benjamin, Ethan, Muhammad, } Characters;
 
+/* InputState written by input thread and read by game logic thread, protected by mutex */
+
+typedef struct {
+    volatile int up, down, left, right;
+    volatile int quit;
+    pthread_mutex_t lock;
+} InputState;
+
 typedef struct {
     char name[MAX_NAME_LENGTH];
     int x, y;
     int score;
     Characters character;
     pthread_t keystroke;
+    InputState inputState;
 } Player;
 
 typedef struct {
@@ -56,9 +65,13 @@ typedef struct {
 // Available functions to be called from NASM assembly
 Game* init();
 void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *), deinit(Game *);
+void *input_thread(void *arg);   
+void apply_input(Game *game);  
 
 // Internal helper functions
 void __clear_all_windows__(Game *game), __refresh_all_windows__(Game *game);
 char32_t __resolveCharacter__(Characters*);
+
+  
 
 #endif
