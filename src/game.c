@@ -66,6 +66,7 @@ void update(Game *game) {
     if (game->env->seed != 0) __adjust_map__(game, wgame_height, wgame_width);
     else __show_initial_screen__(game->env, wgame_height, wgame_width);
     for (int i = 0; i < game->player_count; i++) {
+        game->players[i]->score++;
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->players[i]->score);
         mvwaddch(game->env->wgame, game->players[i]->y, game->players[i]->x, __resolveCharacter__(&(game->players[i]->character)));
     }
