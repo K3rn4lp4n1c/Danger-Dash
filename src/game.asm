@@ -65,6 +65,8 @@ game_main:
 .await_game_start_or_quit:
         call    update_game
         call    curses_getch
+        ; push game pointer as an argument to update_game
+        push    dword [game]
         cmp     al, 'q' ; check if the user wants to quit
         je      game_end
         cmp     al, ' ' ; check if the user wants to start the game

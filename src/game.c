@@ -7,18 +7,19 @@ Game* init() {
     noecho();
     keypad(stdscr, TRUE);
 
-    WINDOW *wstatus = newwin(LINES/3, COLS, 0, 0);
+    WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
     box(wstatus, 0, 0);
     
-    WINDOW *wgame = newwin(LINES/3, COLS, LINES / 3, 0);
+    WINDOW *wgame = newwin(LINES / 3, COLS, LINES / 3, 0);
 
-    WINDOW *winfo = newwin(LINES/3, COLS, 2 * LINES / 3, 0);
+    WINDOW *winfo = newwin(LINES / 3, COLS, 2 * LINES / 3, 0);
     box(winfo, 0, 0);
 
     Environment *env = malloc(sizeof(Environment));
     env->wstatus = wstatus;
     env->wgame = wgame;
     env->winfo = winfo;
+    env->frame_rate = 10000; // ~10ms per frame
     env->map = NULL;
     int wgame_height = getmaxy(wgame);
     int wgame_width = getmaxx(wgame);
@@ -60,72 +61,23 @@ char32_t __resolveCharacter__(Characters *character) {
 }
 
 void update(Game *game) {
-    /* Add more obstacles before printing game state based on player position */
-    /* Also reduce the vertical distance of the player to simulate gravity */
     __clear_all_windows__(game);
     if (game->environment->seed != 0) {
-        int wgame_height = getmaxy(game->environment->wgame);
-        int wgame_width = getmaxx(game->environment->wgame);
-        for (int i = 0; i < wgame_height; i++) {
-            for (int j = 0; j < wgame_width; j++) {
-                if (rand() % 100 < 5) { // 5% chance to place an obstacle
-                    game->environment->map[i][j] = '#';
-                } else {
-                    game->environment->map[i][j] = ' ';
+        if (rand() % 100 < OBSTACLE_ODDS) {
+            int wgame_height = getmaxy(game->environment->wgame);
+            int wgame_width = getmaxx(game->environment->wgame);
+            __place_obstacle__(game, wgame_height, wgame_width);
+            for (int i = 0; i < wgame_height; i++) {
+                for (int j = 0; j < wgame_width; j++) {
+                    mvwprintw(game->environment->wgame, i, j, "%c", game->environment->map[i][j]);
                 }
             }
         }
-        usleep(100000); // Sleep for 100ms to control game speed
-    } else {
-        int wgame_height = getmaxy(game->environment->wgame);
-        int wgame_width = getmaxx(game->environment->wgame);
-        for (int i = 0; i < wgame_height; i++) {
-            for (int j = 0; j < wgame_width; j++) {
-                game->environment->map[i][j] = ' ';
-            }
-        }
-
-        if (has_colors()) {
-            start_color();
-            init_pair(1, COLOR_CYAN, COLOR_BLACK);
-            init_pair(2, COLOR_YELLOW, COLOR_BLACK);
-            init_pair(3, COLOR_GREEN, COLOR_BLACK);
-        }
-
-        box(game->environment->wgame, 0, 0);
-
-        const char *title = GAME_TITLE;
-        const char *version = GAME_VERSION;
-        const char *start_msg = "Press SPACE to start";
-        const char *quit_msg = "Press Q during game to quit";
-        const char *controls_msg = "Move: WASD or Arrow Keys";
-
-        int title_y = wgame_height / 2 - 3;
-        int version_y = title_y + 1;
-        int controls_y = title_y + 3;
-        int start_y = controls_y + 2;
-        int quit_y = start_y + 1;
-
-        if (has_colors()) wattron(game->environment->wgame, COLOR_PAIR(1) | A_BOLD);
-        mvwprintw(game->environment->wgame, title_y, (wgame_width - (int)strlen(title)) / 2, "%s", title);
-        if (has_colors()) wattroff(game->environment->wgame, COLOR_PAIR(1) | A_BOLD);
-
-        if (has_colors()) wattron(game->environment->wgame, COLOR_PAIR(2));
-        mvwprintw(game->environment->wgame, version_y, (wgame_width - (int)strlen(version)) / 2, "%s", version);
-        if (has_colors()) wattroff(game->environment->wgame, COLOR_PAIR(2));
-
-        mvwprintw(game->environment->wgame, controls_y, (wgame_width - (int)strlen(controls_msg)) / 2, "%s", controls_msg);
-
-        if (has_colors()) wattron(game->environment->wgame, COLOR_PAIR(3) | A_BOLD);
-        mvwprintw(game->environment->wgame, start_y, (wgame_width - (int)strlen(start_msg)) / 2, "%s", start_msg);
-        if (has_colors()) wattroff(game->environment->wgame, COLOR_PAIR(3) | A_BOLD);
-
-        mvwprintw(game->environment->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
-    }
+    } else __show_initial_screen__(game->environment);
+    
     for (int i = 0; i < game->player_count; i++) {
         mvwprintw(game->environment->wstatus, 1, 1, "Score: %d", game->players[i]->score);
         mvwprintw(game->environment->wgame, game->players[i]->y, game->players[i]->x, "%lc", __resolveCharacter__(&(game->players[i]->character)));
-        mvwprintw(game->environment->winfo, 1, 1, "Player: %s", game->players[i]->name);
     }
 
     __refresh_all_windows__(game);
@@ -134,30 +86,20 @@ void update(Game *game) {
 }
 
 void run(Game *game) {
-    for (int i = 0; i < game->player_count; i++) {
-        pthread_create(&(game->players[i]->keystroke), NULL, (void *)displace, (void *)&(game->players[i]));
-    }
+    // for (int i = 0; i < game->player_count; i++) {
+    //     pthread_create(&(game->players[i]->keystroke), NULL, (void *)displace, (void *)&(game->players[i]));
+    // }
+    printf("%s", game->players[0]->name); // dummy printf to prevent compiler optimization of player struct
     game->environment->seed = time(NULL);
     srand(game->environment->seed);
-    
-    while ((1) != ESRCH) {
+
+    for (int i = 0; i < game->player_count; i++) {
+        mvwprintw(game->environment->winfo, 1, 1, "Player: %s", game->players[i]->name); 
+    }
+
+    while (1) {
         update(game);
-        for (int i = 0; i < game->player_count; i++) {
-            if (check_for_collision(game->players[i]->x, game->players[i]->y)) {
-                // Handle collision
-                break;
-            }
-        }
-        int inactive_players = 0;
-        for (int i = 0; i < game->player_count; i++) {
-            if (pthread_kill(game->players[i]->keystroke, 0) == 0) {
-                pthread_join(game->players[i]->keystroke, NULL);
-                inactive_players++;
-            }
-        }
-        if (inactive_players == game->player_count) {
-            break; // All players are inactive, end the game loop
-        }
+        usleep(game->environment->frame_rate);
     }
 }
 
@@ -187,6 +129,9 @@ void displace(Player *player) {
                 pthread_exit(NULL);
             default: break;
         }
+    }
+    if (check_for_collision(player->x, player->y)) {
+        // Handle collision
     }
 }
 
@@ -222,6 +167,99 @@ void __refresh_all_windows__(Game *game) {
     wrefresh(game->environment->wstatus);
     wrefresh(game->environment->wgame);
     wrefresh(game->environment->winfo);
+}
+
+void __start_curses_colors__() {
+    if (has_colors()) {
+        start_color();
+        init_pair(1, COLOR_RED, COLOR_BLACK);
+        init_pair(2, COLOR_GREEN, COLOR_BLACK);
+        init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+        init_pair(4, COLOR_BLUE, COLOR_BLACK);
+        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+        init_pair(6, COLOR_CYAN, COLOR_BLACK);
+    }
+}
+
+void __show_initial_screen__(Environment *env) {
+    int wgame_height = getmaxy(env->wgame);
+    int wgame_width = getmaxx(env->wgame);
+    for (int i = 0; i < wgame_height; i++) {
+        for (int j = 0; j < wgame_width; j++) {
+            env->map[i][j] = ' ';
+        }
+    }
+
+    box(env->wgame, 0, 0);
+
+    const char *title = GAME_TITLE;
+    const char *version = GAME_VERSION;
+    const char *start_msg = "Press SPACE to start";
+    const char *quit_msg = "Press Q during game to quit";
+    const char *controls_msg = "Move: WASD or Arrow Keys";
+
+    int title_y = wgame_height / 2 - 3;
+    int version_y = title_y + 1;
+    int controls_y = title_y + 3;
+    int start_y = controls_y + 2;
+    int quit_y = start_y + 1;
+
+    if (has_colors()) wattron(env->wgame, COLOR_PAIR(1) | A_BOLD);
+    mvwprintw(env->wgame, title_y, (wgame_width - (int)strlen(title)) / 2, "%s", title);
+    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(1) | A_BOLD);
+
+    if (has_colors()) wattron(env->wgame, COLOR_PAIR(2));
+    mvwprintw(env->wgame, version_y, (wgame_width - (int)strlen(version)) / 2, "%s", version);
+    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(2));
+
+    mvwprintw(env->wgame, controls_y, (wgame_width - (int)strlen(controls_msg)) / 2, "%s", controls_msg);
+
+    if (has_colors()) wattron(env->wgame, COLOR_PAIR(3) | A_BOLD);
+    mvwprintw(env->wgame, start_y, (wgame_width - (int)strlen(start_msg)) / 2, "%s", start_msg);
+    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(3) | A_BOLD);
+
+    mvwprintw(env->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
+    wrefresh(env->wgame);
+}
+
+void __place_obstacle__(Game *game, int wgame_height, int wgame_width) {
+    // shift all existing obstacles to the left
+    for (int i = 0; i < wgame_height; i++) {
+        for (int j = 0; j < wgame_width - 1; j++) {
+            game->environment->map[i][j] = game->environment->map[i][j + 1];
+        }
+        game->environment->map[i][wgame_width - 1] = ' ';
+    }
+    int obstacle_type = rand() % 3; // 0 = mixed, 1 = air, 2 = land
+    if (obstacle_type == 0) {
+        // mixed obstacle
+        int obstacle_placement = rand() % 2; // 0 = middle, 1 = bottom
+        if (obstacle_placement == 0) {
+            // Place obstacle in the middle row of the last column
+            int middle_y = wgame_height / 2;
+            for (int i = 0; i < game->player_count; i++) {
+                game->environment->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][0];
+            }
+        } else {
+            // Place obstacle at the bottom row of the last column
+            int bottom_y = wgame_height - 2; // -2 to account for box borders
+            for (int i = 0; i < game->player_count; i++) {
+                game->environment->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
+            }
+        }
+    } else if (obstacle_type == 1) {
+        // air obstacle
+        int middle_y = wgame_height / 2;
+        for (int i = 0; i < game->player_count; i++) {
+            game->environment->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
+        }
+    } else {
+        // land obstacle
+        int bottom_y = wgame_height - 2; // -2 to account for box borders
+        for (int i = 0; i < game->player_count; i++) {
+            game->environment->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][2];
+        }
+    }
 }
 
 // A simple function to demonstrate calling a C function from NASM assembly
