@@ -55,17 +55,13 @@ help:
         ret
 
 game_main:
-        ; This is the main function for the game logic
-        ; It will initialize the game, run the game loop, and clean up resources
         call    init_game
-        mov     [game], eax ; store the game pointer returned by init_game
-        push    dword [game] ; push the game pointer as an argument to run_game
-        jmp    .await_game_start_or_quit
+        mov     [game], eax
+        push    dword [game]
 
 .await_game_start_or_quit:
         call    update_game
         call    curses_getch
-        ; push game pointer as an argument to update_game
         push    dword [game]
         cmp     al, 'q' ; check if the user wants to quit
         je      game_end
@@ -76,10 +72,10 @@ game_main:
 game_end:
         ; Clean up resources and exit the game
         mov     eax, [game]
-        push    eax ; push the game pointer as an argument to end_game
+        push    eax
         call    end_game
         mov     eax, [game]
-        push    eax ; push the game pointer as an argument to deinit_game
+        push    eax
         call    deinit_game
 
 check_for_collision:

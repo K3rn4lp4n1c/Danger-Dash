@@ -30,10 +30,17 @@ However, function definitions should go in the corresponding game.c file.
 int check_for_collision( int player_x, int player_y );
 #endif
 
-typedef enum { Benjamin, Ethan, Muhammad, } Characters;
+typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
 
-const char OBSTACLES[][3] = {"#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
+const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
 const double OBSTACLE_ODDS = 0.05; // 10% chance of new obstacle each frame
+const int KEY_MAPPINGS[][4] = {
+    // {DOWN, UP, LEFT, RIGHT}
+    { KEY_DOWN, KEY_UP, KEY_LEFT, KEY_RIGHT },
+    { 's', 'w', 'a', 'd' },
+    { 'k', 'i', 'j', 'l' },
+    { '5', '8', '4', '6' }
+};
 
 typedef struct {
     char name[MAX_NAME_LENGTH];
@@ -63,8 +70,7 @@ Game* init();
 void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *), deinit(Game *);
 
 // Internal helper functions
-void __clear_all_windows__(Game *), __refresh_all_windows__(Game *);
-void __start_curses_colors__();
+void __refresh_all_windows__(Game *), __initialize_curses__();
 void __show_initial_screen__(Environment *, int, int), __adjust_map__(Game *, int, int);
 char32_t __resolveCharacter__(Characters*);
 
