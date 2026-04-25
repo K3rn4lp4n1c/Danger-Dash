@@ -42,6 +42,25 @@ const int KEY_MAPPINGS[][4] = {
     { '5', '8', '4', '6' }
 };
 
+/*
+ * PlayerInput - directional flags for one player.
+ * Written by input thread, read and cleared by apply_input() each frame.
+ */
+typedef struct {
+    volatile int up, down, left, right;
+} PlayerInput;
+
+/*
+ * InputState - one shared block for ALL players, one mutex, one thread.
+ * Player 1: Arrow keys, Player 2: WASD, Player 3: IJKL, Player 4: numpad 8456
+ */
+typedef struct {
+    PlayerInput players[MAX_PLAYERS];
+    volatile int quit;
+    pthread_mutex_t lock;
+    pthread_t thread;
+} InputState;
+
 typedef struct {
     char name[MAX_NAME_LENGTH];
     int x, y;
@@ -63,6 +82,7 @@ typedef struct {
     int player_count;
     Player *players[MAX_PLAYERS];
     Environment *env;
+    InputState input;
 } Game;
 
 // Available functions to be called from NASM assembly
@@ -73,5 +93,8 @@ void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *),
 void __refresh_all_windows__(Game *), __initialize_curses__();
 void __show_initial_screen__(Environment *, int, int), __adjust_map__(Game *, int, int);
 char32_t __resolveCharacter__(Characters*);
+void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *), deinit(Game *);
+void *input_thread(void *arg);
+void apply_input(Game *game);
 
 #endif

@@ -55,28 +55,40 @@ help:
         ret
 
 game_main:
+        push    ebp
+        mov     ebp, esp
         call    init_game
         mov     [game], eax
-        push    dword [game]
 
 .await_game_start_or_quit:
-        call    update_game
-        call    curses_getch
         push    dword [game]
-        cmp     al, 'q' ; check if the user wants to quit
+        call    update_game
+        add     esp, 4
+        call    curses_getch
+        cmp     al, 'q'
         je      game_end
-        cmp     al, ' ' ; check if the user wants to start the game
-        je      run_game
+        cmp     al, ' '
+        je      .start_game
         jmp     .await_game_start_or_quit
 
+.start_game:
+        push    dword [game]
+        call    run_game
+        add     esp, 4
+        jmp     game_end
+
 game_end:
-        ; Clean up resources and exit the game
         mov     eax, [game]
         push    eax
         call    end_game
+        add     esp, 4
         mov     eax, [game]
         push    eax
         call    deinit_game
+        add     esp, 4
+        mov     esp, ebp
+        pop     ebp
+        ret
 
 check_for_collision:
         ; This function will check for collision between the player and obstacles
