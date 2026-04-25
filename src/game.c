@@ -38,10 +38,11 @@ Game* init() {
         snprintf(player_name, sizeof(player_name), "Player%d", i + 1);
         strcpy(player->name, player_name);
         player->x = 1;
-        player->y = getmaxy(wgame) - 2; // start on the ground
+        player->y = getmaxy(wgame) - 1; // start on the ground
         player->score = 0;
         player->character = Benjamin;
         game->players[i] = player;
+        pthread_mutex_init(&player->lock, NULL);
     }
     
     return game;
@@ -62,6 +63,7 @@ void update(Game *game) {
     if (game->env->seed != 0) __adjust_map__(game, wgame_height, wgame_width);
     else __show_initial_screen__(game->env, wgame_height, wgame_width);
     for (int i = 0; i < game->player_count; i++) {
+        game->players[i]->score++;
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->players[i]->score);
         mvwaddch(game->env->wgame, game->players[i]->y, game->players[i]->x, __resolveCharacter__(&(game->players[i]->character)));
     }
@@ -92,24 +94,24 @@ void* __keypress__(void *arg) {
         int ch = getch();
         Player *player = NULL;
         if (ch > KEY_MIN && ch < KEY_MAX) {
-            if (ch == KEY_BACKSPACE) {
+            if (game->player_count > 0 && ch == KEY_BACKSPACE) {
                 game->players[0]->y = game->players[0]->x = 0;
                 continue;
             }
             player = game->players[0];
-        } else if (ch >= '0' && ch <= '9') {
+        } else if (game->player_count > 3 && ch >= '0' && ch <= '9') {
             if (ch == '0') {
                 game->players[3]->y = game->players[3]->x = 0;
                 continue;
             }
             player = game->players[3]; 
-        } else if ((ch >= 'i' && ch <= 'p') || (ch >= 'I' && ch <= 'P')) {
+        } else if (game->player_count > 2 && (ch >= 'i' && ch <= 'p' || ch >= 'I' && ch <= 'P')) {
             if (ch == 'p' || ch == 'P') {
                 game->players[2]->y = game->players[2]->x = 0;
                 continue;
             }
             player = game->players[2]; 
-        } else {
+        } else if (game->player_count > 1) {
             if (ch == 'q' || ch == 'Q') {
                 game->players[1]->y = game->players[1]->x = 0;
                 continue;
@@ -124,23 +126,24 @@ void* __keypress__(void *arg) {
 }
 
 void* __player_effect__(void *arg) {
+    pthread_detach(pthread_self());
     Player *player = (Player *)arg;
     int lines = LINES / 3, cols = COLS;
     int *new_yx = displace(player->key, player->x, player->y, lines, cols);
-    if (new_yx[0] < player->y) {
-        // from air to ground, need to animate the fall
+    if (player->y > new_yx[0]) {
+        // from ground to air, need to animate the jump
         for (int i = player->y; i >= new_yx[0]; i--) {
             player->y = i;
-            usleep(10000);
+            usleep(100000);
         }
-    } else if (new_yx[0] > player->y) {
-        // from ground to air, need to animate the jump
-        for (int i = player->y; i <= new_yx[0]; i++) {
-            player->y = i;
-            usleep(10000);
-        }
-        for (int i = player->y; i >= lines - 2; i--) {
         // then fall back down
+        for (int i = player->y; i <= lines - 1; i++) {
+            player->y = i;
+            usleep(100000);
+        }
+    } else if (player->y < new_yx[0]) {
+        // from air to ground, need to animate the fall
+        for (int i = player->y; i <= new_yx[0]; i++) {
             player->y = i;
             usleep(50000);
         }
@@ -148,6 +151,7 @@ void* __player_effect__(void *arg) {
         player->y = new_yx[0];
     }
     player->x = new_yx[1];
+    free(new_yx);
     pthread_mutex_unlock(&(player->lock));
     pthread_exit(NULL);
 }
@@ -162,7 +166,7 @@ int* displace(int key, int x, int y, int max_y, int max_x) {
         case 'I':
         case '2':
             // ensure player is on ground
-            y = (y == max_y - 2) ? max_y / 2 : y;
+            y = (y == max_y - 1) ? max_y / 2 : y;
             break;
         case KEY_DOWN:
         case 's':
@@ -171,7 +175,7 @@ int* displace(int key, int x, int y, int max_y, int max_x) {
         case 'K':
         case '8':
             // ensure player is in the air
-            y = (y > max_y - 2) ? max_y - 2 : y;
+            y = (y < max_y - 1) ? max_y - 1 : y;
             break;
         case KEY_LEFT:
         case 'a':
@@ -189,10 +193,10 @@ int* displace(int key, int x, int y, int max_y, int max_x) {
         case 'L':
         case '6':
             // prevent moving into the right wall
-            x = (x < max_x - 2) ? x + 1 : x;
+            x = (x < max_x - 1) ? x + 1 : x;
             break;
     }
-    static int new_yx[2];
+    int *new_yx = malloc(2 * sizeof(int));
     new_yx[0] = y;
     new_yx[1] = x;
     return new_yx;
@@ -303,7 +307,6 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
             // Place obstacle in the middle row of the last column
             int middle_y = wgame_height / 2;
             for (int i = 0; i < game->player_count; i++) {
-                game->players[i]->score++;
                 game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][0];
             }
         } else {
