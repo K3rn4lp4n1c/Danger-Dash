@@ -29,7 +29,7 @@ Game* init() {
     Game *game = malloc(sizeof(Game));
     game->env = env;
     game->player_count = 1; // for now, we'll have just one player
-    for (int i = 0; i < 4; i++) game->players[i] = NULL;
+    for (int i = 0; i < MAX_PLAYERS; i++) game->players[i] = NULL;
     
 
     for (int i = 0; i < game->player_count; i++) {
@@ -38,7 +38,7 @@ Game* init() {
         snprintf(player_name, sizeof(player_name), "Player%d", i + 1);
         strcpy(player->name, player_name);
         player->x = 1;
-        player->y = 1;
+        player->y = getmaxy(wgame) - 2; // start on the ground
         player->score = 0;
         player->character = Benjamin;
         game->players[i] = player;
@@ -70,9 +70,7 @@ void update(Game *game) {
 }
 
 void run(Game *game) {
-    // for (int i = 0; i < game->player_count; i++) {
-    //     pthread_create(&(game->players[i]->keystroke), NULL, (void *)displace, (void *)&(game->players[i]));
-    // }
+    pthread_create(&game->input, NULL, __keypress__, (void*)game);
     game->env->seed = time(NULL);
     srand(game->env->seed);
 
@@ -88,40 +86,121 @@ void run(Game *game) {
     }
 }
 
-void displace(Player *player) {
+void* __keypress__(void *arg) {
+    Game *game = (Game *)arg;
     while (1) {
-        int keystroke = getch();
-            switch (keystroke) {
-            // directional keys (WASD or arrow keys)
-            case 'w':
-            case KEY_UP:
-                player->y = (player->y > 1) ? player->y - 1 : player->y;
+        int ch = getch();
+        Player *player = NULL;
+        if (ch > KEY_MIN && ch < KEY_MAX) {
+            if (ch == KEY_BACKSPACE) {
+                game->players[0]->y = game->players[0]->x = 0;
                 continue;
-            case 's':
-            case KEY_DOWN:
-                player->y = (player->y < LINES - 2) ? player->y + 1 : player->y;
+            }
+            player = game->players[0];
+        } else if (ch >= '0' && ch <= '9') {
+            if (ch == '0') {
+                game->players[3]->y = game->players[3]->x = 0;
                 continue;
-            case 'a':
-            case KEY_LEFT:
-                player->x = (player->x > 1) ? player->x - 1 : player->x;
+            }
+            player = game->players[3]; 
+        } else if ((ch >= 'i' && ch <= 'p') || (ch >= 'I' && ch <= 'P')) {
+            if (ch == 'p' || ch == 'P') {
+                game->players[2]->y = game->players[2]->x = 0;
                 continue;
-            case 'd':
-            case KEY_RIGHT:
-                player->x = (player->x < COLS - 2) ? player->x + 1 : player->x;
+            }
+            player = game->players[2]; 
+        } else {
+            if (ch == 'q' || ch == 'Q') {
+                game->players[1]->y = game->players[1]->x = 0;
                 continue;
-            case 'q':
-                // Exit the game loop
-                pthread_exit(NULL);
-            default: break;
+            }
+            player = game->players[1];
         }
+        if (player == NULL) continue;
+        pthread_mutex_lock(&(player->lock));
+        player->key = ch;
+        pthread_create(&player->thread, NULL, __player_effect__, (void*)player);
     }
-    if (check_for_collision(player->x, player->y)) {
-        // Handle collision
+}
+
+void* __player_effect__(void *arg) {
+    Player *player = (Player *)arg;
+    int lines = LINES / 3, cols = COLS;
+    int *new_yx = displace(player->key, player->x, player->y, lines, cols);
+    if (new_yx[0] < player->y) {
+        // from air to ground, need to animate the fall
+        for (int i = player->y; i >= new_yx[0]; i--) {
+            player->y = i;
+            usleep(10000);
+        }
+    } else if (new_yx[0] > player->y) {
+        // from ground to air, need to animate the jump
+        for (int i = player->y; i <= new_yx[0]; i++) {
+            player->y = i;
+            usleep(10000);
+        }
+        for (int i = player->y; i >= lines - 2; i--) {
+        // then fall back down
+            player->y = i;
+            usleep(50000);
+        }
+    } else {
+        player->y = new_yx[0];
     }
+    player->x = new_yx[1];
+    pthread_mutex_unlock(&(player->lock));
+    pthread_exit(NULL);
+}
+
+int* displace(int key, int x, int y, int max_y, int max_x) {
+
+    switch (key) {
+        case KEY_UP:
+        case 'w':
+        case 'W':
+        case 'i':
+        case 'I':
+        case '2':
+            // ensure player is on ground
+            y = (y == max_y - 2) ? max_y / 2 : y;
+            break;
+        case KEY_DOWN:
+        case 's':
+        case 'S':
+        case 'k':
+        case 'K':
+        case '8':
+            // ensure player is in the air
+            y = (y > max_y - 2) ? max_y - 2 : y;
+            break;
+        case KEY_LEFT:
+        case 'a':
+        case 'A':
+        case 'j':
+        case 'J':
+        case '4':
+            // prevent moving into the left wall
+            x = (x > 1) ? x - 1 : x;
+            break;
+        case KEY_RIGHT:
+        case 'd':
+        case 'D':
+        case 'l':
+        case 'L':
+        case '6':
+            // prevent moving into the right wall
+            x = (x < max_x - 2) ? x + 1 : x;
+            break;
+    }
+    static int new_yx[2];
+    new_yx[0] = y;
+    new_yx[1] = x;
+    return new_yx;
 }
 
 void end(Game *game) {
     // Placeholder for any end-of-game logic, such as displaying a game over screen
+    pthread_join(game->input, NULL);
     werase(game->env->wstatus);
     werase(game->env->wgame);
     werase(game->env->winfo);

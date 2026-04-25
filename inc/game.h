@@ -1,6 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
+#define _GNU_SOURCE
 #include <curses.h>
 #include <stdlib.h>
 #include <time.h>
@@ -36,10 +37,10 @@ const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air,
 const double OBSTACLE_ODDS = 0.05; // 10% chance of new obstacle each frame
 const int KEY_MAPPINGS[][4] = {
     // {DOWN, UP, LEFT, RIGHT}
-    { KEY_DOWN, KEY_UP, KEY_LEFT, KEY_RIGHT },
+    { KEY_DOWN, KEY_UP, KEY_LEFT, KEY_RIGHT }, // 0402 - 0405
     { 's', 'w', 'a', 'd' },
-    { 'k', 'i', 'j', 'l' },
-    { '5', '8', '4', '6' }
+    { 'k', 'i', 'j', 'l' }, // k - l
+    { '5', '8', '4', '6' } // '5' - '6'
 };
 
 typedef struct {
@@ -47,7 +48,9 @@ typedef struct {
     int x, y;
     int score;
     Characters character;
-    pthread_t keystroke;
+    pthread_mutex_t lock;
+    pthread_t thread;
+    int key;
 } Player;
 
 typedef struct {
@@ -63,15 +66,18 @@ typedef struct {
     int player_count;
     Player *players[MAX_PLAYERS];
     Environment *env;
+    pthread_t input;
 } Game;
 
 // Available functions to be called from NASM assembly
 Game* init();
-void helloWorld(), update(Game *), run(Game *), displace(Player *), end(Game *), deinit(Game *);
+void helloWorld(), update(Game *), run(Game *), end(Game *), deinit(Game *);
+int* displace(int, int, int, int, int);
 
 // Internal helper functions
 void __refresh_all_windows__(Game *), __initialize_curses__();
 void __show_initial_screen__(Environment *, int, int), __adjust_map__(Game *, int, int);
+void* __keypress__(void *), *__player_effect__(void *);
 char32_t __resolveCharacter__(Characters*);
 
 #endif
