@@ -2,11 +2,7 @@
 
 // Initializes the game state, resources, etc.
 Game* init() {
-    initscr();
-    curs_set(0);
-    noecho();
-    keypad(stdscr, TRUE);
-
+    __initialize_curses__();
     WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
     box(wstatus, 0, 0);
     
@@ -66,7 +62,6 @@ void update(Game *game) {
     if (game->env->seed != 0) __adjust_map__(game, wgame_height, wgame_width);
     else __show_initial_screen__(game->env, wgame_height, wgame_width);
     for (int i = 0; i < game->player_count; i++) {
-        game->players[i]->score++;
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->players[i]->score);
         mvwaddch(game->env->wgame, game->players[i]->y, game->players[i]->x, __resolveCharacter__(&(game->players[i]->character)));
     }
@@ -127,7 +122,9 @@ void displace(Player *player) {
 
 void end(Game *game) {
     // Placeholder for any end-of-game logic, such as displaying a game over screen
-    __clear_all_windows__(game);
+    werase(game->env->wstatus);
+    werase(game->env->wgame);
+    werase(game->env->winfo);
     mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
     for(int i = 0; i < game->player_count; i++) {
         mvwprintw(game->env->wstatus, 2 + i, 1, "%s: %d", game->players[i]->name, game->players[i]->score);
@@ -147,12 +144,6 @@ void deinit(Game *game) {
     exit(0);
 }
 
-void __clear_all_windows__(Game *game) {
-    werase(game->env->wstatus);
-    werase(game->env->wgame);
-    werase(game->env->winfo);
-}
-
 void __refresh_all_windows__(Game *game) {
     wnoutrefresh(game->env->wstatus);
     wnoutrefresh(game->env->wgame);
@@ -160,7 +151,12 @@ void __refresh_all_windows__(Game *game) {
     doupdate();
 }
 
-void __start_curses_colors__() {
+void __initialize_curses__() {
+    initscr();
+    curs_set(0);
+    noecho();
+    keypad(stdscr, TRUE);
+
     if (has_colors()) {
         start_color();
         init_pair(1, COLOR_RED, COLOR_BLACK);
@@ -228,6 +224,7 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
             // Place obstacle in the middle row of the last column
             int middle_y = wgame_height / 2;
             for (int i = 0; i < game->player_count; i++) {
+                game->players[i]->score++;
                 game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][0];
             }
         } else {
