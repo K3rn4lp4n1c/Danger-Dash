@@ -32,6 +32,7 @@ int check_for_collision( int player_x, int player_y );
 #endif
 
 typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
+typedef enum { INACTIVE, ACTIVE, IDLE, } States;
 
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
 const double OBSTACLE_ODDS = 0.05; // 10% chance of new obstacle each frame
@@ -48,6 +49,7 @@ typedef struct {
     int x, y;
     int score;
     Characters character;
+    States state;
     pthread_mutex_t lock;
     pthread_t thread;
     int key;
@@ -58,7 +60,6 @@ typedef struct {
     WINDOW *wgame;
     WINDOW *winfo;
     char **map;
-    time_t seed;
     unsigned long frame_rate;
 } Environment;
 
@@ -66,6 +67,7 @@ typedef struct {
     int player_count;
     Player *players[MAX_PLAYERS];
     Environment *env;
+    States state;
     pthread_t input;
 } Game;
 
@@ -76,8 +78,8 @@ int* displace(int, int, int, int, int);
 
 // Internal helper functions
 void __refresh_all_windows__(Game *), __initialize_curses__();
-void __show_initial_screen__(Environment *, int, int), __adjust_map__(Game *, int, int);
+void __show_initial_screen__(Game *, int, int), __adjust_map__(Game *, int, int);
 void* __keypress__(void *), *__player_effect__(void *);
-char32_t __resolveCharacter__(Characters*);
+char32_t __resolve_character__(Characters*);
 
 #endif

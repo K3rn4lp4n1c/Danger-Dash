@@ -66,8 +66,13 @@ game_main:
         cmp     al, 'q' ; check if the user wants to quit
         je      game_end
         cmp     al, ' ' ; check if the user wants to start the game
-        je      run_game
+        je      game_start
         jmp     .await_game_start_or_quit
+
+game_start:
+        push    dword [game]
+        call    run_game
+        call    game_end
 
 game_end:
         ; Clean up resources and exit the game
@@ -77,6 +82,7 @@ game_end:
         mov     eax, [game]
         push    eax
         call    deinit_game
+        jmp     asm_end
 
 check_for_collision:
         ; This function will check for collision between the player and obstacles
