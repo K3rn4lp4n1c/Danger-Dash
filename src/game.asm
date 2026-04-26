@@ -56,27 +56,36 @@ help:
 
 game_main:
         call    init_game
-        mov     [game], eax
-        push    dword [game]
+        mov     [game], eax ; store the pointer to the game struct in the game variable
 
 .await_game_start_or_quit:
-        call    update_game
-        call    curses_getch
         push    dword [game]
+        call    update_game
+        add     esp, 4
+        call    curses_getch
         cmp     al, 'q' ; check if the user wants to quit
-        je      game_end
+        je      .end
         cmp     al, ' ' ; check if the user wants to start the game
-        je      run_game
+        je      .start
         jmp     .await_game_start_or_quit
 
-game_end:
+.start:
+        push    dword [game]
+        call    run_game
+        add     esp, 4
+        jmp     .end
+
+.end:
         ; Clean up resources and exit the game
-        mov     eax, [game]
-        push    eax
+        push    dword [game]
         call    end_game
-        mov     eax, [game]
-        push    eax
+        add     esp, 4
+
+        push    dword [game]
         call    deinit_game
+        add     esp, 4
+        
+        jmp     asm_end
 
 check_for_collision:
         ; This function will check for collision between the player and obstacles
