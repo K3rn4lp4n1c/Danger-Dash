@@ -416,9 +416,9 @@ void end(Game *game) {
 }
 
 void deinit(Game *game) {
-    werase(game->env->wstatus);
-    werase(game->env->wgame);
-    werase(game->env->winfo);
+    delwin(game->env->wstatus);
+    delwin(game->env->wgame);
+    delwin(game->env->winfo);
     for(int i = 0; i < getmaxy(game->env->wgame); i++) free(game->env->map[i]);
     free(game->env->map);
     free(game->env);
@@ -426,9 +426,6 @@ void deinit(Game *game) {
         pthread_mutex_destroy(&game->players[i]->lock);
         free(game->players[i]);
     }
-    delwin(game->env->wstatus);
-    delwin(game->env->wgame);
-    delwin(game->env->winfo);
 
     free(game);
     endwin();
