@@ -64,15 +64,15 @@ void update(Game *game) {
     int wgame_width = getmaxx(game->env->wgame);
     if (game->state == INACTIVE) __show_initial_screen__(game, wgame_height, wgame_width);
     if (game->state == ACTIVE) __adjust_map__(game, wgame_height, wgame_width);
-    for (int i = 0, idle_players = 0; i < game->player_count; i++) {
+    for (int i = 0, active_players = 0; i < game->player_count; i++) {
         Player *player = game->players[i];
         if (game->state == ACTIVE && player->state == IDLE) {
-            idle_players = (idle_players >= game->player_count) ? idle_players : idle_players + 1;
-            if (idle_players == game->player_count) game->state = IDLE;
+            active_players = (active_players <= 0) ? active_players : active_players - 1;
+            if (active_players == 0) game->state = IDLE;
         }
         if (game->state == IDLE && player->state == ACTIVE) {
-            idle_players = (idle_players <= 0) ? idle_players : idle_players - 1;
-            if (idle_players == 0) game->state = ACTIVE;
+            active_players = (active_players >= game->player_count) ? active_players : active_players + 1;
+            if (active_players == game->player_count) game->state = ACTIVE;
         }
         if(game->state == ACTIVE) player->score++;
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", player->score);
@@ -108,79 +108,140 @@ void* __keypress__(void *arg) {
     while (game->state != INACTIVE) {
         int ch = getch();
         Player *player = NULL;
-        if (ch == ERR) continue; // no input, just continue the loop
+
+        if (ch == ERR) continue;
+
         if (game->player_count > 0 && ch > KEY_MIN && ch < KEY_MAX) {
             player = game->players[0];
+        } else if (game->player_count > 3 && ch >= '0' && ch <= '9') {
+            player = game->players[3];
+        } else if (game->player_count > 2 &&
+                   ((ch >= 'i' && ch <= 'p') || (ch >= 'I' && ch <= 'P'))) {
+            player = game->players[2];
+        } else if (game->player_count > 1) {
+            player = game->players[1];
         }
-        else if (game->player_count > 3 && ch>='0' && ch<='9') player = game->players[3]; 
-        else if (game->player_count > 2 && ( ch>='i' && ch<='p' || ch>='I' && ch<='P' )) {
-            player = game->players[2]; 
-        } else if (game->player_count > 1) player = game->players[1];
-    
+
         if (player == NULL) continue;
-        if ( ch=='q' || ch=='Q' || ch=='p' || ch=='P' || ch==KEY_BACKSPACE || ch=='0' ) {
-            if (player->state == IDLE) player->state = ACTIVE;
-            else if (player->state == ACTIVE) player->state = IDLE;
+
+        pthread_mutex_lock(&player->lock);
+
+        if (ch == 'q' || ch == 'Q' || ch == 'p' || ch == 'P' ||
+            ch == KEY_BACKSPACE || ch == '0') {
+            player->state = (player->state == IDLE) ? ACTIVE : IDLE;
+            pthread_mutex_unlock(&player->lock);
             continue;
         }
-        if (player->state == IDLE) continue;
-        pthread_mutex_lock(&(player->lock));
-        player->key = ch;
-        pthread_create(&player->thread, NULL, __player_effect__, (void*)player);
+
+        if (player->state == IDLE || player->state == BUSY) {
+            pthread_mutex_unlock(&player->lock);
+            continue;
+        }
+
+        player->state = BUSY;
+
+        Input *input = malloc(sizeof(*input));
+        if (input == NULL) {
+            player->state = ACTIVE;
+            pthread_mutex_unlock(&player->lock);
+            continue;
+        }
+
+        input->player = player;
+        input->key = ch;
+
+        if (pthread_create(&player->thread, NULL, __player_effect__, input) != 0) {
+            free(input);
+            player->state = ACTIVE;
+            pthread_mutex_unlock(&player->lock);
+            continue;
+        }
+
+        pthread_mutex_unlock(&player->lock);
     }
+
     return NULL;
 }
 
 void* __player_effect__(void *arg) {
     pthread_detach(pthread_self());
-    Player *player = (Player *)arg;
-    if (player->state != ACTIVE) {
-        pthread_mutex_unlock(&(player->lock));
-        pthread_exit(NULL);
+
+    Input *input = (Input *)arg;
+    Player *player = input->player;
+    int key = input->key;
+    free(input);
+
+    int start_x, start_y;
+    int lines = LINES / 3;
+    int cols = COLS;
+
+    pthread_mutex_lock(&player->lock);
+
+    if (player->state != BUSY) {
+        pthread_mutex_unlock(&player->lock);
+        return NULL;
     }
-    int lines = LINES / 3, cols = COLS;
-    int *new_yx = displace(player->key, player->x, player->y, lines, cols);
-    int y = new_yx[0], x = new_yx[1];
+
+    start_x = player->x;
+    start_y = player->y;
+
+    pthread_mutex_unlock(&player->lock);
+
+    int *new_yx = displace(key, start_x, start_y, lines, cols);
+    if (new_yx == NULL) {
+        pthread_mutex_lock(&player->lock);
+        if (player->state == BUSY) player->state = ACTIVE;
+        pthread_mutex_unlock(&player->lock);
+        return NULL;
+    }
+
+    int target_y = new_yx[0];
+    int target_x = new_yx[1];
     free(new_yx);
-    if (player->y > y) {
-        // from ground to air, need to animate the jump
-        for (int i = player->y; i >= y; i--) {
-            if (player->state == IDLE) {
-                pthread_mutex_unlock(&(player->lock));
-                pthread_exit(NULL);
+
+    if (start_y > target_y) {
+        for (int i = start_y; i >= target_y; --i) {
+            pthread_mutex_lock(&player->lock);
+            if (player->state == IDLE || player->state == INACTIVE) {
+                pthread_mutex_unlock(&player->lock);
+                return NULL;
             }
             player->y = i;
+            pthread_mutex_unlock(&player->lock);
             usleep(100000);
         }
-        // then fall back down
-        for (int i = player->y; i <= lines - 1; i++) {
-            if (player->state == IDLE) {
-                pthread_mutex_unlock(&(player->lock));
-                pthread_exit(NULL);
+
+        for (int i = target_y; i <= lines - 1; ++i) {
+            pthread_mutex_lock(&player->lock);
+            if (player->state == IDLE || player->state == INACTIVE) {
+                pthread_mutex_unlock(&player->lock);
+                return NULL;
             }
             player->y = i;
+            pthread_mutex_unlock(&player->lock);
             usleep(100000);
         }
-    } else if (player->y < y) {
-        // from air to ground, need to animate the fall
-        for (int i = player->y; i <= y; i++) {
-            if (player->state == IDLE) {
-                pthread_mutex_unlock(&(player->lock));
-                pthread_exit(NULL);
+    } else if (start_y < target_y) {
+        for (int i = start_y; i <= target_y; ++i) {
+            pthread_mutex_lock(&player->lock);
+            if (player->state == IDLE || player->state == INACTIVE) {
+                pthread_mutex_unlock(&player->lock);
+                return NULL;
             }
             player->y = i;
+            pthread_mutex_unlock(&player->lock);
             usleep(10000);
         }
-    } else {
-        player->y = y;
     }
-    player->x = x;
-    if (player->state == IDLE) {
-        pthread_mutex_unlock(&(player->lock));
-        pthread_exit(NULL);
+
+    pthread_mutex_lock(&player->lock);
+    if (player->state == BUSY) {
+        player->x = target_x;
+        player->state = ACTIVE;
     }
-    pthread_mutex_unlock(&(player->lock));
-    pthread_exit(NULL);
+    pthread_mutex_unlock(&player->lock);
+
+    return NULL;
 }
 
 int* displace(int key, int x, int y, int max_y, int max_x) {
@@ -227,40 +288,6 @@ int* displace(int key, int x, int y, int max_y, int max_x) {
     new_yx[0] = y;
     new_yx[1] = x;
     return new_yx;
-}
-
-void end(Game *game) {
-    game->state = INACTIVE;
-    for (int i = 0; i < game->player_count; i++) game->players[i]->state = IDLE;
-    pthread_join(game->input, NULL);
-    werase(game->env->wstatus);
-    werase(game->env->wgame);
-    werase(game->env->winfo);
-    free(game->env->map);
-    free(game->env);
-    for (int i = 0; i < game->player_count; i++) {
-        pthread_mutex_destroy(&game->players[i]->lock);
-        free(game->players[i]);
-    }
-    /* Placeholder for printing to screen after stop */
-    mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
-    for(int i = 0; i < game->player_count; i++) {
-        mvwprintw(game->env->wstatus, 2 + i, 1, "%s: %d", game->players[i]->name, game->players[i]->score);
-    }
-    __refresh_all_windows__(game);
-    mvprintw(LINES - 1, 0, "Exiting game... Press any key to continue.");
-    timeout(-1);
-    getch();
-}
-
-void deinit(Game *game) {
-    delwin(game->env->wstatus);
-    delwin(game->env->wgame);
-    delwin(game->env->winfo);
-
-    free(game);
-    endwin();
-    exit(0);
 }
 
 void __refresh_all_windows__(Game *game) {
@@ -371,6 +398,41 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
             mvwaddch(game->env->wgame, i, j, game->env->map[i][j]);
         }
     }
+}
+
+void end(Game *game) {
+    game->state = INACTIVE;
+    for (int i = 0; i < game->player_count; i++) game->players[i]->state = IDLE;
+    pthread_join(game->input, NULL);
+    /* Placeholder for printing to screen after stop */
+    mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
+    for(int i = 0; i < game->player_count; i++) {
+        mvwprintw(game->env->wstatus, 2 + i, 1, "%s: %d", game->players[i]->name, game->players[i]->score);
+    }
+    __refresh_all_windows__(game);
+    mvprintw(LINES - 1, 0, "Exiting game... Press any key to continue.");
+    timeout(-1);
+    getch();
+}
+
+void deinit(Game *game) {
+    werase(game->env->wstatus);
+    werase(game->env->wgame);
+    werase(game->env->winfo);
+    for(int i = 0; i < getmaxy(game->env->wgame); i++) free(game->env->map[i]);
+    free(game->env->map);
+    free(game->env);
+    for (int i = 0; i < game->player_count; i++) {
+        pthread_mutex_destroy(&game->players[i]->lock);
+        free(game->players[i]);
+    }
+    delwin(game->env->wstatus);
+    delwin(game->env->wgame);
+    delwin(game->env->winfo);
+
+    free(game);
+    endwin();
+    exit(0);
 }
 
 // A simple function to demonstrate calling a C function from NASM assembly

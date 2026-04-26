@@ -32,7 +32,7 @@ int check_for_collision( int player_x, int player_y );
 #endif
 
 typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
-typedef enum { INACTIVE, ACTIVE, IDLE, } States;
+typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
 
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
 const double OBSTACLE_ODDS = 0.05; // 10% chance of new obstacle each frame
@@ -45,8 +45,12 @@ typedef struct {
     States state;
     pthread_mutex_t lock;
     pthread_t thread;
-    int key;
 } Player;
+
+typedef struct {
+    Player *player;
+    int key;
+} Input;
 
 typedef struct {
     WINDOW *wstatus;
