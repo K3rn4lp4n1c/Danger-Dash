@@ -22,7 +22,7 @@ Game* init() {
     env->map = malloc(wgame_height * sizeof(char *));
     for (int i = 0; i < wgame_height; i++) {
         env->map[i] = malloc(wgame_width * sizeof(char));
-        memset(env->map[i], ' ', COLS);
+        memset(env->map[i], ' ', wgame_width);
     }
 
     Game *game = malloc(sizeof(Game));
@@ -54,6 +54,7 @@ char32_t __resolve_character__(Characters *character) {
         case Benjamin: return U'B';
         case Ethan: return U'E';
         case Muhammad: return U'M';
+        case Youssef: return U'Y';
         default: return U'?';
     }
 }
@@ -108,7 +109,9 @@ void* __keypress__(void *arg) {
         int ch = getch();
         Player *player = NULL;
         if (ch == ERR) continue; // no input, just continue the loop
-        if (ch > KEY_MIN && ch < KEY_MAX) player = game->players[0];
+        if (game->player_count > 0 && ch > KEY_MIN && ch < KEY_MAX) {
+            player = game->players[0];
+        }
         else if (game->player_count > 3 && ch>='0' && ch<='9') player = game->players[3]; 
         else if (game->player_count > 2 && ( ch>='i' && ch<='p' || ch>='I' && ch<='P' )) {
             player = game->players[2]; 
@@ -131,15 +134,17 @@ void* __keypress__(void *arg) {
 void* __player_effect__(void *arg) {
     pthread_detach(pthread_self());
     Player *player = (Player *)arg;
-    if (player->state == IDLE) {
+    if (player->state != ACTIVE) {
         pthread_mutex_unlock(&(player->lock));
         pthread_exit(NULL);
     }
     int lines = LINES / 3, cols = COLS;
     int *new_yx = displace(player->key, player->x, player->y, lines, cols);
-    if (player->y > new_yx[0]) {
+    int y = new_yx[0], x = new_yx[1];
+    free(new_yx);
+    if (player->y > y) {
         // from ground to air, need to animate the jump
-        for (int i = player->y; i >= new_yx[0]; i--) {
+        for (int i = player->y; i >= y; i--) {
             if (player->state == IDLE) {
                 pthread_mutex_unlock(&(player->lock));
                 pthread_exit(NULL);
@@ -156,9 +161,9 @@ void* __player_effect__(void *arg) {
             player->y = i;
             usleep(100000);
         }
-    } else if (player->y < new_yx[0]) {
+    } else if (player->y < y) {
         // from air to ground, need to animate the fall
-        for (int i = player->y; i <= new_yx[0]; i++) {
+        for (int i = player->y; i <= y; i++) {
             if (player->state == IDLE) {
                 pthread_mutex_unlock(&(player->lock));
                 pthread_exit(NULL);
@@ -167,10 +172,9 @@ void* __player_effect__(void *arg) {
             usleep(10000);
         }
     } else {
-        player->y = new_yx[0];
+        player->y = y;
     }
-    player->x = new_yx[1];
-    free(new_yx);
+    player->x = x;
     if (player->state == IDLE) {
         pthread_mutex_unlock(&(player->lock));
         pthread_exit(NULL);
@@ -227,10 +231,17 @@ int* displace(int key, int x, int y, int max_y, int max_x) {
 
 void end(Game *game) {
     game->state = INACTIVE;
+    for (int i = 0; i < game->player_count; i++) game->players[i]->state = IDLE;
     pthread_join(game->input, NULL);
     werase(game->env->wstatus);
     werase(game->env->wgame);
     werase(game->env->winfo);
+    free(game->env->map);
+    free(game->env);
+    for (int i = 0; i < game->player_count; i++) {
+        pthread_mutex_destroy(&game->players[i]->lock);
+        free(game->players[i]);
+    }
     /* Placeholder for printing to screen after stop */
     mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
     for(int i = 0; i < game->player_count; i++) {
@@ -289,8 +300,8 @@ void __show_initial_screen__(Game *game, int wgame_height, int wgame_width) {
     const char *title = GAME_TITLE;
     const char *version = GAME_VERSION;
     const char *start_msg = "Press SPACE to start";
-    const char *quit_msg = "Press Q during game to quit";
-    const char *controls_msg = "Move: WASD or Arrow Keys";
+    const char *quit_msg = "Press BACKSPACE during game to quit";
+    const char *controls_msg = "Move: Arrow Keys";
 
     int title_y = wgame_height / 2 - 3;
     int version_y = title_y + 1;

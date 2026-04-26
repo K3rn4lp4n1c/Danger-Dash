@@ -36,13 +36,6 @@ typedef enum { INACTIVE, ACTIVE, IDLE, } States;
 
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
 const double OBSTACLE_ODDS = 0.05; // 10% chance of new obstacle each frame
-const int KEY_MAPPINGS[][4] = {
-    // {DOWN, UP, LEFT, RIGHT}
-    { KEY_DOWN, KEY_UP, KEY_LEFT, KEY_RIGHT }, // 0402 - 0405
-    { 's', 'w', 'a', 'd' },
-    { 'k', 'i', 'j', 'l' }, // k - l
-    { '5', '8', '4', '6' } // '5' - '6'
-};
 
 typedef struct {
     char name[MAX_NAME_LENGTH];
