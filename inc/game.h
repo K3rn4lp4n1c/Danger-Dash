@@ -3,7 +3,6 @@
 
 #define _XOPEN_SOURCE_EXTENDED 1
 
-#include <curses.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
@@ -27,7 +26,7 @@ However, function definitions should go in the corresponding game.c file.
 #define GAME_VERSION "0.0.1-alpha"
 #define MAX_PLAYERS 4
 #define MAX_NAME_LENGTH 20
-#define INITIAL_FRAME_RATE 100000 // microseconds (10 FPS)
+#define INITIAL_FRAME_RATE 60000 // microseconds (10 FPS)
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS

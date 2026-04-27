@@ -69,24 +69,27 @@ void update(Game *game) {
         pthread_mutex_lock(&player->lock);
         int x = player->x;
         int y = player->y;
+        States state = player->state;
         pthread_mutex_unlock(&player->lock);
 
         if (game->state == ACTIVE && check_for_collision(y, x)) {
+            pthread_mutex_lock(&player->lock);
             player->state = INACTIVE;
+            pthread_mutex_unlock(&player->lock);
             active_players = (active_players <= 0) ? 0 : active_players - 1;
             if (active_players == 0) game->state = INACTIVE;
         }
-        if (game->state == ACTIVE && player->state == IDLE) {
+        if (game->state == ACTIVE && state == IDLE) {
             active_players = (active_players <= 0) ? 0 : active_players - 1;
             if (active_players == 0) game->state = IDLE;
         }
-        if (game->state == IDLE && player->state == ACTIVE) {
+        if (game->state == IDLE && state == ACTIVE) {
             active_players = (active_players >= game->player_count) ? game->player_count : active_players + 1;
             if (active_players == game->player_count) game->state = ACTIVE;
         }
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->score);
 
-        mvwaddwstr(game->env->wgame, player->y, player->x, __resolve_character__(&(player->character)));
+        mvwaddwstr(game->env->wgame, y, x, __resolve_character__(&(player->character)));
     }
 
     __refresh_all_windows__(game);
