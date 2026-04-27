@@ -206,6 +206,5 @@ move_player:
         dec     eax ; max_x - 1
         cmp     dword [ebp - 16], eax ; player_x < cols - 1
         jge     .cleanup
-        dec     eax ; max_x - 1
         inc     dword [ebp - 16] ; player_x + 1
         jmp     .cleanup
