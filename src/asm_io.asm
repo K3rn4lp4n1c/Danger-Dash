@@ -41,7 +41,6 @@
   %define _init         init
   %define _update       update
   %define _run          run
-  %define _displace     displace
   %define _end          end
   %define _deinit       deinit
   %define _curses_getch getch
@@ -60,7 +59,6 @@
   %define _init         init_
   %define _update       update_
   %define _run          run_
-  %define _displace     displace_
   %define _end          end_
   %define _deinit       deinit_
   %define _curses_getch getch_
@@ -141,7 +139,9 @@ segment .text
 init_game:
         push    ebp
         mov     ebp, esp
+
         call    _init
+
         mov     esp, ebp
         pop     ebp
         ret
@@ -149,19 +149,8 @@ init_game:
 curses_getch:
         push    ebp
         mov     ebp, esp
+
         call    _curses_getch
-        mov     esp, ebp
-        pop     ebp
-        ret
-
-move_player:
-        push    ebp
-        mov     ebp, esp
-
-        push    dword [ebp+8] ; game pointer
-        push    dword [ebp+12] ; direction
-        call    _displace
-        add     esp, 8
 
         mov     esp, ebp
         pop     ebp

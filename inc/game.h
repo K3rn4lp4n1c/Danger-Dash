@@ -1,7 +1,6 @@
 #ifndef GAME_H
 #define GAME_H
 
-#define _GNU_SOURCE
 #include <curses.h>
 #include <stdlib.h>
 #include <time.h>
@@ -28,7 +27,8 @@ However, function definitions should go in the corresponding game.c file.
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
-int check_for_collision( int player_x, int player_y );
+int check_for_collision(int, int);
+void move_player(int *, int, int, int, int, int);
 #endif
 
 typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
@@ -50,6 +50,7 @@ typedef struct {
 typedef struct {
     Player *player;
     int key;
+    unsigned long frame_rate;
 } Input;
 
 typedef struct {
@@ -71,7 +72,6 @@ typedef struct {
 // Available functions to be called from NASM assembly
 Game* init();
 void helloWorld(), update(Game *), run(Game *), end(Game *), deinit(Game *);
-int* displace(int, int, int, int, int);
 
 // Internal helper functions
 void __refresh_all_windows__(Game *), __initialize_curses__();

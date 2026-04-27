@@ -10,7 +10,8 @@ segment .bss
 
 segment .text
         global  asm_main
-        global check_for_collision
+        global  check_for_collision
+        global  move_player
 
 asm_main:
         push    ebp
@@ -73,14 +74,16 @@ game_main:
         push    dword [game]
         call    run_game
         add     esp, 4
-        jmp     .end
-
-.end:
-        ; Clean up resources and exit the game
         push    dword [game]
         call    end_game
         add     esp, 4
+        call    curses_getch ; wait for user input before exiting
+        cmp     al, 'q' ; check if the user wants to quit
+        je      .end
+        jmp     .start
 
+.end:
+        ; Clean up resources and exit the game
         push    dword [game]
         call    deinit_game
         add     esp, 4
@@ -93,3 +96,82 @@ check_for_collision:
         ; For now, we will just return 0 (no collision)
         xor     eax, eax
         ret
+
+move_player:
+        push    ebp
+        mov     ebp, esp
+
+        ; void move_player(int *, int, int, int, int, int)
+        sub     esp, 24 ; allocate space for 5 ints and 1 int pointer: 6 * 4 = 24 bytes
+        mov     eax, [ebp + 8]  ; int *new_yx
+        mov     [ebp - 4 ], eax
+        mov     eax, [ebp + 12] ; int key
+        mov     [ebp - 8 ], eax
+        mov     eax, [ebp + 16] ; int player_y
+        mov     [ebp - 12], eax
+        mov     eax, [ebp + 20] ; int player_x
+        mov     [ebp - 16], eax
+        mov     eax, [ebp + 24] ; int lines
+        mov     [ebp - 20], eax
+        mov     eax, [ebp + 28] ; int cols
+        mov     [ebp - 24], eax
+
+        ; check if the key is an arrow key and update new_yx accordingly
+        mov     eax, [ebp - 8]
+        cmp     eax, 'w' ; up
+        je      .move_up
+        cmp     eax, 's' ; down
+        je      .move_down
+        cmp     eax, 'a' ; left
+        je      .move_left
+        cmp     eax, 'd' ; right
+        je      .move_right
+
+.cleanup:
+        ; move the new_yx values back to the caller
+        mov     eax, [ebp - 12] ; player_y
+        mov     edx, [ebp - 16] ; player_x
+        mov     esi, [ebp - 4]  ; new_yx
+        mov     [esi], eax      ; new_yx[0] = player_y
+        mov     [esi + 4], edx  ; new_yx[1] = player_x
+
+        mov     esp, ebp
+        pop     ebp
+        ret
+
+.move_up:
+        ; y = (y == max_y - 1) ? max_y / 2 : y;
+        mov     eax, [ebp - 20] ; lines
+        dec     eax ; max_y - 1
+        cmp     dword [ebp - 12], eax ; player_y == lines - 1
+        jne     .cleanup
+        mov     eax, [ebp - 20] ; lines
+        shr     eax, 1 ; max_y / 2
+        mov     [ebp - 12], eax ; player_y = max_y / 2
+        jmp     .cleanup
+
+.move_down:
+        ; y = (y < max_y - 1) ? max_y - 1 : y
+        mov     eax, [ebp - 20] ; lines
+        dec     eax ; max_y - 1
+        cmp     dword [ebp - 12], eax ; player_y < lines - 1
+        jge     .cleanup
+        mov     [ebp - 12], eax
+        jmp     .cleanup
+
+.move_left:
+        ; x = (x > 1) ? x - 1 : x;
+        cmp     dword [ebp - 16], 1 ; player_x > 1
+        jle     .cleanup
+        dec     dword [ebp - 16] ; player_x - 1
+        jmp     .cleanup
+
+.move_right:
+        ; x = (x < max_x - 1) ? x + 1 : x;
+        mov     eax, [ebp - 24] ; cols
+        dec     eax ; max_x - 1
+        cmp     dword [ebp - 16], eax ; player_x < cols - 1
+        jge     .cleanup
+        dec     eax ; max_x - 1
+        inc     dword [ebp - 16] ; player_x + 1
+        jmp     .cleanup

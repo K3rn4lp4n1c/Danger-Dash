@@ -110,6 +110,11 @@ void* __keypress__(void *arg) {
         Player *player = NULL;
 
         if (ch == ERR) continue;
+        if (ch == 27) {
+            // ESC key to quit
+            game->state = INACTIVE;
+            break;
+        }
 
         if (game->player_count > 0 && ch > KEY_MIN && ch < KEY_MAX) {
             player = game->players[0];
@@ -140,7 +145,7 @@ void* __keypress__(void *arg) {
 
         player->state = BUSY;
 
-        Input *input = malloc(sizeof(*input));
+        Input *input = malloc(sizeof(Input));
         if (input == NULL) {
             player->state = ACTIVE;
             pthread_mutex_unlock(&player->lock);
@@ -149,6 +154,7 @@ void* __keypress__(void *arg) {
 
         input->player = player;
         input->key = ch;
+        input->frame_rate = game->env->frame_rate;
 
         if (pthread_create(&player->thread, NULL, __player_effect__, input) != 0) {
             free(input);
@@ -187,7 +193,24 @@ void* __player_effect__(void *arg) {
 
     pthread_mutex_unlock(&player->lock);
 
-    int *new_yx = displace(key, start_x, start_y, lines, cols);
+    int *new_yx = malloc(2 * sizeof(int));
+
+    switch (key) {
+        case KEY_UP: case 'w': case 'W': case 'i': case 'I': case '2':
+            key = 'w';
+            break;
+        case KEY_DOWN: case 's': case 'S': case 'k': case 'K': case '8':
+            key = 's';
+            break;
+        case KEY_LEFT: case 'a': case 'A': case 'j': case 'J': case '4':
+            key = 'a';
+            break;
+        case KEY_RIGHT: case 'd': case 'D': case 'l': case 'L': case '6':
+            key = 'd';
+            break;
+    }
+    if (new_yx == NULL) return NULL;
+    move_player(new_yx, key, start_y, start_x, lines, cols);
     if (new_yx == NULL) {
         pthread_mutex_lock(&player->lock);
         if (player->state == BUSY) player->state = ACTIVE;
@@ -208,7 +231,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(100000);
+            usleep(input->frame_rate);
         }
 
         for (int i = target_y; i <= lines - 1; ++i) {
@@ -219,7 +242,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(100000);
+            usleep(input->frame_rate);
         }
     } else if (start_y < target_y) {
         for (int i = start_y; i <= target_y; ++i) {
@@ -230,7 +253,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(10000);
+            usleep(input->frame_rate / 10);
         }
     }
 
@@ -242,52 +265,6 @@ void* __player_effect__(void *arg) {
     pthread_mutex_unlock(&player->lock);
 
     return NULL;
-}
-
-int* displace(int key, int x, int y, int max_y, int max_x) {
-
-    switch (key) {
-        case KEY_UP:
-        case 'w':
-        case 'W':
-        case 'i':
-        case 'I':
-        case '2':
-            // ensure player is on ground
-            y = (y == max_y - 1) ? max_y / 2 : y;
-            break;
-        case KEY_DOWN:
-        case 's':
-        case 'S':
-        case 'k':
-        case 'K':
-        case '8':
-            // ensure player is in the air
-            y = (y < max_y - 1) ? max_y - 1 : y;
-            break;
-        case KEY_LEFT:
-        case 'a':
-        case 'A':
-        case 'j':
-        case 'J':
-        case '4':
-            // prevent moving into the left wall
-            x = (x > 1) ? x - 1 : x;
-            break;
-        case KEY_RIGHT:
-        case 'd':
-        case 'D':
-        case 'l':
-        case 'L':
-        case '6':
-            // prevent moving into the right wall
-            x = (x < max_x - 1) ? x + 1 : x;
-            break;
-    }
-    int *new_yx = malloc(2 * sizeof(int));
-    new_yx[0] = y;
-    new_yx[1] = x;
-    return new_yx;
 }
 
 void __refresh_all_windows__(Game *game) {
@@ -327,7 +304,7 @@ void __show_initial_screen__(Game *game, int wgame_height, int wgame_width) {
     const char *title = GAME_TITLE;
     const char *version = GAME_VERSION;
     const char *start_msg = "Press SPACE to start";
-    const char *quit_msg = "Press BACKSPACE during game to quit";
+    const char *quit_msg = "Press BACKSPACE during game to pause/resume, ESC to quit";
     const char *controls_msg = "Move: Arrow Keys";
 
     int title_y = wgame_height / 2 - 3;
@@ -404,22 +381,24 @@ void end(Game *game) {
     game->state = INACTIVE;
     for (int i = 0; i < game->player_count; i++) game->players[i]->state = IDLE;
     pthread_join(game->input, NULL);
+    werase(game->env->wstatus);
+    werase(game->env->wgame);
+    werase(game->env->winfo);
+    __refresh_all_windows__(game);
     /* Placeholder for printing to screen after stop */
     mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
     for(int i = 0; i < game->player_count; i++) {
         mvwprintw(game->env->wstatus, 2 + i, 1, "%s: %d", game->players[i]->name, game->players[i]->score);
     }
-    __refresh_all_windows__(game);
     mvprintw(LINES - 1, 0, "Exiting game... Press any key to continue.");
     timeout(-1);
-    getch();
 }
 
 void deinit(Game *game) {
+    for(int i = 0; i < getmaxy(game->env->wgame); i++) free(game->env->map[i]);
     delwin(game->env->wstatus);
     delwin(game->env->wgame);
     delwin(game->env->winfo);
-    for(int i = 0; i < getmaxy(game->env->wgame); i++) free(game->env->map[i]);
     free(game->env->map);
     free(game->env);
     for (int i = 0; i < game->player_count; i++) {
