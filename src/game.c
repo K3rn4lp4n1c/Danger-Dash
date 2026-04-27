@@ -29,9 +29,9 @@ Game* init() {
     game->env = env;
     game->state = INACTIVE;
     game->player_count = 1; // for now, we'll have just one player
+    game->score = 0;
     for (int i = 0; i < MAX_PLAYERS; i++) game->players[i] = NULL;
     
-
     for (int i = 0; i < game->player_count; i++) {
         Player *player = malloc(sizeof(Player));
         char player_name[MAX_NAME_LENGTH];
@@ -39,7 +39,6 @@ Game* init() {
         strcpy(player->name, player_name);
         player->x = 1;
         player->y = getmaxy(wgame) - 1; // start on the ground
-        player->score = 0;
         player->character = Benjamin;
         player->state = INACTIVE;
         game->players[i] = player;
@@ -49,13 +48,13 @@ Game* init() {
     return game;
 }
 
-char32_t __resolve_character__(Characters *character) {
+const wchar_t *__resolve_character__(Characters *character) {
     switch (*character) {
-        case Benjamin: return U'B';
-        case Ethan: return U'E';
-        case Muhammad: return U'M';
-        case Youssef: return U'Y';
-        default: return U'?';
+        case Benjamin: return L"😀";
+        case Ethan: return L"😎";
+        case Muhammad: return L"🔥";
+        case Youssef: return L"⚡";
+        default: return L"❓";
     }
 }
 
@@ -64,19 +63,30 @@ void update(Game *game) {
     int wgame_width = getmaxx(game->env->wgame);
     if (game->state == INACTIVE) __show_initial_screen__(game, wgame_height, wgame_width);
     if (game->state == ACTIVE) __adjust_map__(game, wgame_height, wgame_width);
-    for (int i = 0, active_players = 0; i < game->player_count; i++) {
+    for (int i = 0, active_players = game->player_count; i < game->player_count; i++) {
         Player *player = game->players[i];
+
+        pthread_mutex_lock(&player->lock);
+        int x = player->x;
+        int y = player->y;
+        pthread_mutex_unlock(&player->lock);
+
+        if (game->state == ACTIVE && check_for_collision(y, x)) {
+            player->state = INACTIVE;
+            active_players = (active_players <= 0) ? 0 : active_players - 1;
+            if (active_players == 0) game->state = INACTIVE;
+        }
         if (game->state == ACTIVE && player->state == IDLE) {
-            active_players = (active_players <= 0) ? active_players : active_players - 1;
+            active_players = (active_players <= 0) ? 0 : active_players - 1;
             if (active_players == 0) game->state = IDLE;
         }
         if (game->state == IDLE && player->state == ACTIVE) {
-            active_players = (active_players >= game->player_count) ? active_players : active_players + 1;
+            active_players = (active_players >= game->player_count) ? game->player_count : active_players + 1;
             if (active_players == game->player_count) game->state = ACTIVE;
         }
-        if(game->state == ACTIVE) player->score++;
-        mvwprintw(game->env->wstatus, 1, 1, "Score: %d", player->score);
-        mvwaddch(game->env->wgame, player->y, player->x, __resolve_character__(&(player->character)));
+        mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->score);
+
+        mvwaddwstr(game->env->wgame, player->y, player->x, __resolve_character__(&(player->character)));
     }
 
     __refresh_all_windows__(game);
@@ -275,6 +285,7 @@ void __refresh_all_windows__(Game *game) {
 }
 
 void __initialize_curses__() {
+    setlocale(LC_ALL, "");
     initscr();
     curs_set(0);
     noecho();
@@ -375,6 +386,7 @@ void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
             mvwaddch(game->env->wgame, i, j, game->env->map[i][j]);
         }
     }
+    game->score++;
 }
 
 void end(Game *game) {
@@ -387,9 +399,7 @@ void end(Game *game) {
     __refresh_all_windows__(game);
     /* Placeholder for printing to screen after stop */
     mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
-    for(int i = 0; i < game->player_count; i++) {
-        mvwprintw(game->env->wstatus, 2 + i, 1, "%s: %d", game->players[i]->name, game->players[i]->score);
-    }
+    mvwprintw(game->env->wstatus, 2, 1, "Score: %d", game->score);
     mvprintw(LINES - 1, 0, "Exiting game... Press any key to continue.");
     timeout(-1);
 }

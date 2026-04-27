@@ -91,10 +91,44 @@ game_main:
         jmp     asm_end
 
 check_for_collision:
-        ; This function will check for collision between the player and obstacles
-        ; It will return 1 if there is a collision, 0 otherwise
-        ; For now, we will just return 0 (no collision)
+        push    ebp
+        mov     ebp, esp
+        push    ebx
+        push    esi
+
+        mov     edx, [ebp + 8]    ; y
+        mov     ebx, [ebp + 12]   ; x
+
+        mov     eax, [game]       ; load pointer-to-Game (global 'game' bss)
+        test    eax, eax
+        jz      .no_collision
+        mov     eax, [eax + 8]    ; Game->env
+        test    eax, eax
+        jz      .no_collision
+        mov     eax, [eax + 12]   ; Environment->map (char **)
+        test    eax, eax
+        jz      .no_collision
+
+        mov     esi, [eax + edx*4] ; row pointer = map[y]
+        test    esi, esi
+        jz      .no_collision
+
+        mov     al, [esi + ebx]   ; map[y][x]
+        cmp     al, ' '
+        jne     .collision        ; non-space => collision
+
+.no_collision:
         xor     eax, eax
+        jmp     .done
+
+.collision:
+        mov     eax, 1
+
+.done:
+        pop     esi
+        pop     ebx
+        mov     esp, ebp
+        pop     ebp
         ret
 
 move_player:
