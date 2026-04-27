@@ -185,6 +185,7 @@ void* __player_effect__(void *arg) {
     Input *input = (Input *)arg;
     Player *player = input->player;
     int key = input->key;
+    unsigned long frame_rate = input->frame_rate;
     free(input);
 
     int start_x, start_y;
@@ -235,13 +236,15 @@ void* __player_effect__(void *arg) {
     if (start_y > target_y) {
         for (int i = start_y; i >= target_y; --i) {
             pthread_mutex_lock(&player->lock);
+            if (player == NULL) return NULL;
+            
             if (player->state == IDLE || player->state == INACTIVE) {
                 pthread_mutex_unlock(&player->lock);
                 return NULL;
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(input->frame_rate);
+            usleep(frame_rate);
         }
 
         for (int i = target_y; i <= lines - 1; ++i) {
@@ -252,7 +255,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(input->frame_rate);
+            usleep(frame_rate);
         }
     } else if (start_y < target_y) {
         for (int i = start_y; i <= target_y; ++i) {
@@ -263,7 +266,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(input->frame_rate / 10);
+            usleep(frame_rate / 10);
         }
     }
 
