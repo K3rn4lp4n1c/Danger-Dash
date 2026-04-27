@@ -28,7 +28,8 @@
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
-int check_for_collision( int player_x, int player_y );
+int check_for_collision(int, int);
+void move_player(int *, int, int, int, int, int);
 #endif
 
 #endif
