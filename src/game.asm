@@ -116,11 +116,6 @@ move_player:
         mov     eax, [ebp + 28] ; int cols
         mov     [ebp - 24], eax
 
-        ; check if new_yx is not null
-        mov     eax, [ebp - 4]
-        cmp     eax, 0
-        je      .cleanup
-
         ; check if the key is an arrow key and update new_yx accordingly
         mov     eax, [ebp - 8]
         cmp     eax, 'w' ; up
@@ -161,7 +156,6 @@ move_player:
         dec     eax ; max_y - 1
         cmp     dword [ebp - 12], eax ; player_y < lines - 1
         jge     .cleanup
-        dec     eax ; max_y - 1
         mov     [ebp - 12], eax
         jmp     .cleanup
 

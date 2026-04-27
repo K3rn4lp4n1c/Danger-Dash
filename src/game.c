@@ -145,7 +145,7 @@ void* __keypress__(void *arg) {
 
         player->state = BUSY;
 
-        Input *input = malloc(sizeof(*input));
+        Input *input = malloc(sizeof(Input));
         if (input == NULL) {
             player->state = ACTIVE;
             pthread_mutex_unlock(&player->lock);
@@ -154,6 +154,7 @@ void* __keypress__(void *arg) {
 
         input->player = player;
         input->key = ch;
+        input->frame_rate = game->env->frame_rate;
 
         if (pthread_create(&player->thread, NULL, __player_effect__, input) != 0) {
             free(input);
@@ -208,7 +209,7 @@ void* __player_effect__(void *arg) {
             key = 'd';
             break;
     }
-
+    if (new_yx == NULL) return NULL;
     move_player(new_yx, key, start_y, start_x, lines, cols);
     if (new_yx == NULL) {
         pthread_mutex_lock(&player->lock);
@@ -230,7 +231,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(100000);
+            usleep(input->frame_rate);
         }
 
         for (int i = target_y; i <= lines - 1; ++i) {
@@ -241,7 +242,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(100000);
+            usleep(input->frame_rate);
         }
     } else if (start_y < target_y) {
         for (int i = start_y; i <= target_y; ++i) {
@@ -252,7 +253,7 @@ void* __player_effect__(void *arg) {
             }
             player->y = i;
             pthread_mutex_unlock(&player->lock);
-            usleep(10000);
+            usleep(input->frame_rate / 10);
         }
     }
 
@@ -394,10 +395,10 @@ void end(Game *game) {
 }
 
 void deinit(Game *game) {
+    for(int i = 0; i < getmaxy(game->env->wgame); i++) free(game->env->map[i]);
     delwin(game->env->wstatus);
     delwin(game->env->wgame);
     delwin(game->env->winfo);
-    for(int i = 0; i < getmaxy(game->env->wgame); i++) free(game->env->map[i]);
     free(game->env->map);
     free(game->env);
     for (int i = 0; i < game->player_count; i++) {

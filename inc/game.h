@@ -50,6 +50,7 @@ typedef struct {
 typedef struct {
     Player *player;
     int key;
+    unsigned long frame_rate;
 } Input;
 
 typedef struct {
