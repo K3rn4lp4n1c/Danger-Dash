@@ -1,131 +1,261 @@
 #include "game.h"
 
-// Initializes the game state, resources, etc.
 Game* init() {
     __initialize_curses__();
-    WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
-    box(wstatus, 0, 0);
-    
-    WINDOW *wgame = newwin(LINES / 3, COLS, LINES / 3, 0);
 
+    WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
+    WINDOW *wgame = newwin(LINES / 3, COLS, LINES / 3, 0);
     WINDOW *winfo = newwin(LINES / 3, COLS, 2 * LINES / 3, 0);
-    box(winfo, 0, 0);
 
     Environment *env = malloc(sizeof(Environment));
     env->wstatus = wstatus;
     env->wgame = wgame;
     env->winfo = winfo;
-    env->frame_rate = INITIAL_FRAME_RATE;
     env->map = NULL;
     int wgame_height = getmaxy(wgame);
     int wgame_width = getmaxx(wgame);
     env->map = malloc(wgame_height * sizeof(char *));
-    for (int i = 0; i < wgame_height; i++) {
-        env->map[i] = malloc(wgame_width * sizeof(char));
-        memset(env->map[i], ' ', wgame_width);
+    for (int i = 0; i < wgame_height; i++) env->map[i] = malloc(wgame_width * sizeof(char));
+    
+    // turn this to CLI parsing in asm_main later that will be passed to this function
+    int argc = 1;
+    Player *players[MAX_PLAYERS];
+    for (int i = 0; i < MAX_PLAYERS; i++) players[i] = NULL;
+    for (int i = 0; i < argc; i++) {
+        Player *player = malloc(sizeof(Player));
+        char player_name[MAX_NAME_LENGTH];
+        snprintf(player_name, sizeof(player_name), "Player%d", i + 1);
+        strncpy(player->name, player_name, MAX_NAME_LENGTH - 1);
+        player->character = (Characters)i;
+        player->state = INACTIVE;
+        players[i] = player;
+        pthread_mutex_init(&player->lock, NULL);
     }
 
     Game *game = malloc(sizeof(Game));
     game->env = env;
     game->state = INACTIVE;
-    game->player_count = 1; // for now, we'll have just one player
-    game->score = 0;
-    for (int i = 0; i < MAX_PLAYERS; i++) game->players[i] = NULL;
-    
-    for (int i = 0; i < game->player_count; i++) {
-        Player *player = malloc(sizeof(Player));
-        char player_name[MAX_NAME_LENGTH];
-        snprintf(player_name, sizeof(player_name), "Player%d", i + 1);
-        strcpy(player->name, player_name);
-        player->x = 1;
-        player->y = getmaxy(wgame) - 1; // start on the ground
-        player->character = Benjamin;
-        player->state = INACTIVE;
-        game->players[i] = player;
-        pthread_mutex_init(&player->lock, NULL);
-    }
-    
+    pthread_mutex_init(&game->lock, NULL);
+    game->player_count = argc;
+    memcpy(game->players, players, MAX_PLAYERS * sizeof(Player *));
+
+    __initial_screen__(game, wgame_height, wgame_width);
+    __refresh_all_windows__(game);
     return game;
 }
 
-const wchar_t *__resolve_character__(Characters *character) {
-    switch (*character) {
-        case Benjamin: return L"😀";
-        case Ethan: return L"😎";
-        case Muhammad: return L"🔥";
-        case Youssef: return L"⚡";
-        default: return L"❓";
+void __initialize_curses__() {
+    setlocale(LC_ALL, "");
+    initscr();
+    refresh();
+    curs_set(0);
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+
+    if (has_colors()) {
+        start_color();
+        init_pair(1, COLOR_RED, COLOR_BLACK);
+        init_pair(2, COLOR_GREEN, COLOR_BLACK);
+        init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+        init_pair(4, COLOR_BLUE, COLOR_BLACK);
+        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+        init_pair(6, COLOR_CYAN, COLOR_BLACK);
     }
+}
+
+void run(Game *game) {
+    __erase_all_windows__(game->env);
+    box(game->env->wstatus, 0, 0);
+    box(game->env->winfo, 0, 0);
+    int wgame_height = getmaxy(game->env->wgame);
+    int wgame_width = getmaxx(game->env->wgame);
+    for (int i = 0; i < wgame_height; i++) memset(game->env->map[i], ' ', wgame_width);
+    game->env->frame_rate = INITIAL_FRAME_RATE;
+    
+    srand(time(NULL));
+
+    for (int i = 0; i < game->player_count; i++) {
+        game->players[i]->x = 1;
+        game->players[i]->y = getmaxy(game->env->wgame)  - 1;
+        game->players[i]->state = ACTIVE;
+        mvwprintw(game->env->winfo, 1, 1, "Player: %s", game->players[i]->name); 
+    }
+    __refresh_all_windows__(game);
+
+    pthread_mutex_lock(&game->lock);
+    game->state = ACTIVE;
+    pthread_mutex_unlock(&game->lock);
+    pthread_create(&game->input, NULL, __keypress__, (void*)game);
+    game->score = 0;
+
+    States s;
+    do {
+        update(game);
+        usleep(game->env->frame_rate);
+        pthread_mutex_lock(&game->lock);
+        s = game->state;
+        pthread_mutex_unlock(&game->lock);
+    } while (s != INACTIVE);
 }
 
 void update(Game *game) {
     int wgame_height = getmaxy(game->env->wgame);
-    int wgame_width = getmaxx(game->env->wgame);
-    if (game->state == INACTIVE) __show_initial_screen__(game, wgame_height, wgame_width);
-    if (game->state == ACTIVE) __adjust_map__(game, wgame_height, wgame_width);
-    for (int i = 0, active_players = game->player_count; i < game->player_count; i++) {
-        Player *player = game->players[i];
+    int wgame_width  = getmaxx(game->env->wgame);
 
-        pthread_mutex_lock(&player->lock);
-        int x = player->x;
-        int y = player->y;
-        States state = player->state;
-        pthread_mutex_unlock(&player->lock);
+    int positions[MAX_PLAYERS][2];
+    States pstates[MAX_PLAYERS];
+    for (int i = 0; i < game->player_count; i++) {
+        pthread_mutex_lock(&game->players[i]->lock);
+        positions[i][0] = game->players[i]->y;
+        positions[i][1] = game->players[i]->x;
+        pstates[i]      = game->players[i]->state;
+        pthread_mutex_unlock(&game->players[i]->lock);
+    }
 
-        if (game->state == ACTIVE && check_for_collision(y, x)) {
-            pthread_mutex_lock(&player->lock);
-            player->state = INACTIVE;
-            pthread_mutex_unlock(&player->lock);
-            active_players = (active_players <= 0) ? 0 : active_players - 1;
-            if (active_players == 0) game->state = INACTIVE;
+    pthread_mutex_lock(&game->lock);
+    States gState = game->state;
+    pthread_mutex_unlock(&game->lock);
+
+    int active_players = game->player_count;
+    for (int i = 0; i < game->player_count; i++) {
+        if (gState == ACTIVE && check_for_collision(positions[i][0], positions[i][1])) {
+            pthread_mutex_lock(&game->players[i]->lock);
+            game->players[i]->state = INACTIVE;
+            pthread_mutex_unlock(&game->players[i]->lock);
+            active_players--;
+        } else if (pstates[i] == IDLE) {
+            active_players--;
+        } else if (pstates[i] == INACTIVE) {
+            active_players--;
         }
-        if (game->state == ACTIVE && state == IDLE) {
-            active_players = (active_players <= 0) ? 0 : active_players - 1;
-            if (active_players == 0) game->state = IDLE;
-        }
-        if (game->state == IDLE && state == ACTIVE) {
-            active_players = (active_players >= game->player_count) ? game->player_count : active_players + 1;
-            if (active_players == game->player_count) game->state = ACTIVE;
-        }
+    }
+
+    pthread_mutex_lock(&game->lock);
+    if (active_players <= 0) game->state = INACTIVE;
+    else if(gState == ACTIVE && active_players < game->player_count) game->state = IDLE;
+    else if (gState == IDLE && active_players == game->player_count) game->state = ACTIVE;
+    pthread_mutex_unlock(&game->lock);
+
+    if (gState == ACTIVE) __adjust_map__(game, wgame_height, wgame_width);
+
+    for (int i = 0; i < game->player_count; i++) {
         mvwprintw(game->env->wstatus, 1, 1, "Score: %d", game->score);
-
-        mvwaddwstr(game->env->wgame, y, x, __resolve_character__(&(player->character)));
+        mvwaddwstr(game->env->wgame, positions[i][0], positions[i][1], __resolve_character__(&game->players[i]->character));
     }
 
     __refresh_all_windows__(game);
 }
 
-void run(Game *game) {
-    game->state = ACTIVE;
-    for (int i = 0; i < game->player_count; i++) game->players[i]->state = ACTIVE;
-    
-    srand(time(NULL));
-    pthread_create(&game->input, NULL, __keypress__, (void*)game);
-
-    for (int i = 0; i < game->player_count; i++) {
-        mvwprintw(game->env->winfo, 1, 1, "Player: %s", game->players[i]->name); 
+const wchar_t *__resolve_character__(Characters *character) {
+    switch (*character) {
+        case Benjamin: return L"🥷";
+        case Ethan: return L"👨";
+        case Muhammad: return L"👳🏻";
+        case Youssef: return L"🕵";
+        default: return L"❓";
     }
-    box(game->env->wstatus, 0, 0);
-    box(game->env->winfo, 0, 0);
+}
 
-    while (game->state != INACTIVE) {
-        update(game);
-        usleep(game->env->frame_rate);
+void __initial_screen__(Game *game, int wgame_height, int wgame_width) {
+    Environment *env = game->env;
+    for (int i = 0; i < wgame_height; i++) memset(env->map[i], ' ', wgame_width);
+
+    box(env->wgame, 0, 0);
+
+    const char *title = GAME_TITLE;
+    const char *version = GAME_VERSION;
+    const char *start_msg = "Press SPACE to start";
+    const char *quit_msg = "Press BACKSPACE during game to pause/resume, ESC to quit";
+    const char *controls_msg = "Move: Arrow Keys";
+
+    int title_y = wgame_height / 2 - 3;
+    int version_y = title_y + 1;
+    int controls_y = title_y + 3;
+    int start_y = controls_y + 2;
+    int quit_y = start_y + 1;
+
+    if (has_colors()) wattron(env->wgame, COLOR_PAIR(1) | A_BOLD);
+    mvwprintw(env->wgame, title_y, (wgame_width - (int)strlen(title)) / 2, "%s", title);
+    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(1) | A_BOLD);
+
+    if (has_colors()) wattron(env->wgame, COLOR_PAIR(2));
+    mvwprintw(env->wgame, version_y, (wgame_width - (int)strlen(version)) / 2, "%s", version);
+    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(2));
+
+    mvwprintw(env->wgame, controls_y, (wgame_width - (int)strlen(controls_msg)) / 2, "%s", controls_msg);
+
+    if (has_colors()) wattron(env->wgame, COLOR_PAIR(3) | A_BOLD);
+    mvwprintw(env->wgame, start_y, (wgame_width - (int)strlen(start_msg)) / 2, "%s", start_msg);
+    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(3) | A_BOLD);
+
+    mvwprintw(env->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
+}
+
+void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
+    for (int i = 0; i < wgame_height; i++) {
+        for (int j = 0; j < wgame_width - 1; j++) {
+            game->env->map[i][j] = game->env->map[i][j + 1];
+        }
+        game->env->map[i][wgame_width - 1] = ' ';
     }
+    double r = (double)rand() / RAND_MAX;
+
+    int obstacle_type = rand() % 3; // 0 = mixed, 1 = air, 2 = land
+    if (r < (double)OBSTACLE_ODDS && obstacle_type == 0) {
+        int obstacle_placement = rand() % 2;
+        if (obstacle_placement == 0) {
+            int middle_y = wgame_height / 2;
+            for (int i = 0; i < game->player_count; i++) {
+                game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][0];
+            }
+        } else {
+            int bottom_y = wgame_height - 1;
+            for (int i = 0; i < game->player_count; i++) {
+                game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
+            }
+        }
+    } else if (r < (double)OBSTACLE_ODDS && obstacle_type == 1) {
+        int middle_y = wgame_height / 2;
+        for (int i = 0; i < game->player_count; i++) {
+            game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
+        }
+    } else if (r < (double)OBSTACLE_ODDS && obstacle_type == 2) {
+        int bottom_y = wgame_height - 1;
+        for (int i = 0; i < game->player_count; i++) {
+            game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][2];
+        }
+    }
+    for (int i = 0; i < wgame_height; i++) {
+        for (int j = 0; j < wgame_width; j++) {
+            mvwaddch(game->env->wgame, i, j, game->env->map[i][j]);
+        }
+    }
+    game->score++;
 }
 
 void* __keypress__(void *arg) {
     Game *game = (Game *)arg;
     timeout(50);
 
-    while (game->state != INACTIVE) {
+    pthread_mutex_lock(&game->lock);
+    States gState = game->state;
+    pthread_mutex_unlock(&game->lock);
+
+    while (gState != INACTIVE) {
         int ch = getch();
         Player *player = NULL;
 
-        if (ch == ERR) continue;
+        if (ch == ERR) {
+            pthread_mutex_lock(&game->lock);
+            gState = game->state;
+            pthread_mutex_unlock(&game->lock);
+            continue;
+        }
         if (ch == 27) {
-            // ESC key to quit
+            pthread_mutex_lock(&game->lock);
             game->state = INACTIVE;
+            pthread_mutex_unlock(&game->lock);
             break;
         }
 
@@ -177,6 +307,9 @@ void* __keypress__(void *arg) {
         }
 
         pthread_mutex_unlock(&player->lock);
+        pthread_mutex_lock(&game->lock);
+        gState = game->state;
+        pthread_mutex_unlock(&game->lock);
     }
 
     return NULL;
@@ -210,16 +343,16 @@ void* __player_effect__(void *arg) {
     int *new_yx = malloc(2 * sizeof(int));
 
     switch (key) {
-        case KEY_UP: case 'w': case 'W': case 'i': case 'I': case '2':
+        case KEY_UP: //case 'w': case 'W': case 'i': case 'I': case '2':
             key = 'w';
             break;
-        case KEY_DOWN: case 's': case 'S': case 'k': case 'K': case '8':
+        case KEY_DOWN: //case 's': case 'S': case 'k': case 'K': case '8':
             key = 's';
             break;
-        case KEY_LEFT: case 'a': case 'A': case 'j': case 'J': case '4':
+        case KEY_LEFT: //case 'a': case 'A': case 'j': case 'J': case '4':
             key = 'a';
             break;
-        case KEY_RIGHT: case 'd': case 'D': case 'l': case 'L': case '6':
+        case KEY_RIGHT: //case 'd': case 'D': case 'l': case 'L': case '6':
             key = 'd';
             break;
     }
@@ -283,130 +416,30 @@ void* __player_effect__(void *arg) {
     return NULL;
 }
 
+void __erase_all_windows__(Environment *env) {
+    werase(env->wstatus);
+    werase(env->wgame);
+    werase(env->winfo);
+}
+
 void __refresh_all_windows__(Game *game) {
+    wnoutrefresh(stdscr);
     wnoutrefresh(game->env->wstatus);
     wnoutrefresh(game->env->wgame);
     wnoutrefresh(game->env->winfo);
     doupdate();
 }
 
-void __initialize_curses__() {
-    setlocale(LC_ALL, "");
-    initscr();
-    curs_set(0);
-    noecho();
-    keypad(stdscr, TRUE);
-
-    if (has_colors()) {
-        start_color();
-        init_pair(1, COLOR_RED, COLOR_BLACK);
-        init_pair(2, COLOR_GREEN, COLOR_BLACK);
-        init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-        init_pair(4, COLOR_BLUE, COLOR_BLACK);
-        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
-        init_pair(6, COLOR_CYAN, COLOR_BLACK);
-    }
-}
-
-void __show_initial_screen__(Game *game, int wgame_height, int wgame_width) {
-    Environment *env = game->env;
-    for (int i = 0; i < wgame_height; i++) {
-        for (int j = 0; j < wgame_width; j++) {
-            env->map[i][j] = ' ';
-        }
-    }
-
-    box(env->wgame, 0, 0);
-
-    const char *title = GAME_TITLE;
-    const char *version = GAME_VERSION;
-    const char *start_msg = "Press SPACE to start";
-    const char *quit_msg = "Press BACKSPACE during game to pause/resume, ESC to quit";
-    const char *controls_msg = "Move: Arrow Keys";
-
-    int title_y = wgame_height / 2 - 3;
-    int version_y = title_y + 1;
-    int controls_y = title_y + 3;
-    int start_y = controls_y + 2;
-    int quit_y = start_y + 1;
-
-    if (has_colors()) wattron(env->wgame, COLOR_PAIR(1) | A_BOLD);
-    mvwprintw(env->wgame, title_y, (wgame_width - (int)strlen(title)) / 2, "%s", title);
-    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(1) | A_BOLD);
-
-    if (has_colors()) wattron(env->wgame, COLOR_PAIR(2));
-    mvwprintw(env->wgame, version_y, (wgame_width - (int)strlen(version)) / 2, "%s", version);
-    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(2));
-
-    mvwprintw(env->wgame, controls_y, (wgame_width - (int)strlen(controls_msg)) / 2, "%s", controls_msg);
-
-    if (has_colors()) wattron(env->wgame, COLOR_PAIR(3) | A_BOLD);
-    mvwprintw(env->wgame, start_y, (wgame_width - (int)strlen(start_msg)) / 2, "%s", start_msg);
-    if (has_colors()) wattroff(env->wgame, COLOR_PAIR(3) | A_BOLD);
-
-    mvwprintw(env->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
-}
-
-void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
-    // shift all existing obstacles to the left
-    for (int i = 0; i < wgame_height; i++) {
-        for (int j = 0; j < wgame_width - 1; j++) {
-            game->env->map[i][j] = game->env->map[i][j + 1];
-        }
-        game->env->map[i][wgame_width - 1] = ' ';
-    }
-    double r = (double)rand() / RAND_MAX;
-
-    int obstacle_type = rand() % 3; // 0 = mixed, 1 = air, 2 = land
-    if (r < (double)OBSTACLE_ODDS && obstacle_type == 0) {
-        // mixed obstacle
-        int obstacle_placement = rand() % 2; // 0 = middle, 1 = bottom
-        if (obstacle_placement == 0) {
-            // Place obstacle in the middle row of the last column
-            int middle_y = wgame_height / 2;
-            for (int i = 0; i < game->player_count; i++) {
-                game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][0];
-            }
-        } else {
-            // Place obstacle at the bottom row of the last column
-            int bottom_y = wgame_height - 1; // -2 to account for box borders
-            for (int i = 0; i < game->player_count; i++) {
-                game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
-            }
-        }
-    } else if (r < (double)OBSTACLE_ODDS && obstacle_type == 1) {
-        // air obstacle
-        int middle_y = wgame_height / 2;
-        for (int i = 0; i < game->player_count; i++) {
-            game->env->map[middle_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][1];
-        }
-    } else if (r < (double)OBSTACLE_ODDS && obstacle_type == 2) {
-        // land obstacle
-        int bottom_y = wgame_height - 1; // -2 to account for box borders
-        for (int i = 0; i < game->player_count; i++) {
-            game->env->map[bottom_y][wgame_width - 1] = OBSTACLES[game->players[i]->character][2];
-        }
-    }
-    for (int i = 0; i < wgame_height; i++) {
-        for (int j = 0; j < wgame_width; j++) {
-            mvwaddch(game->env->wgame, i, j, game->env->map[i][j]);
-        }
-    }
-    game->score++;
-}
-
 void end(Game *game) {
     game->state = INACTIVE;
-    for (int i = 0; i < game->player_count; i++) game->players[i]->state = IDLE;
+    for (int i = 0; i < game->player_count; i++) game->players[i]->state = INACTIVE;
     pthread_join(game->input, NULL);
-    werase(game->env->wstatus);
-    werase(game->env->wgame);
-    werase(game->env->winfo);
-    __refresh_all_windows__(game);
+    __erase_all_windows__(game->env);
     /* Placeholder for printing to screen after stop */
     mvwprintw(game->env->wstatus, 1, 1, "Game Over! Final Score");
     mvwprintw(game->env->wstatus, 2, 1, "Score: %d", game->score);
-    mvprintw(LINES - 1, 0, "Exiting game... Press any key to continue.");
+    mvprintw(LINES - 1, 0, "Exiting game... Press any key to restart, press q to quit.");
+    __refresh_all_windows__(game);
     timeout(-1);
 }
 
@@ -417,6 +450,7 @@ void deinit(Game *game) {
     delwin(game->env->winfo);
     free(game->env->map);
     free(game->env);
+    pthread_mutex_destroy(&game->lock);
     for (int i = 0; i < game->player_count; i++) {
         pthread_mutex_destroy(&game->players[i]->lock);
         free(game->players[i]);

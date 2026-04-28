@@ -60,9 +60,6 @@ game_main:
         mov     [game], eax ; store the pointer to the game struct in the game variable
 
 .await_game_start_or_quit:
-        push    dword [game]
-        call    update_game
-        add     esp, 4
         call    curses_getch
         cmp     al, 'q' ; check if the user wants to quit
         je      .end
@@ -102,7 +99,7 @@ check_for_collision:
         mov     eax, [game]       ; load pointer-to-Game (global 'game' bss)
         test    eax, eax
         jz      .no_collision
-        mov     eax, [eax + 8]    ; Game->env
+        mov     eax, [eax + 8]    ; Game->env - will break if Game layout changes
         test    eax, eax
         jz      .no_collision
         mov     eax, [eax + 12]   ; Environment->map (char **)
@@ -165,9 +162,9 @@ move_player:
         ; move the new_yx values back to the caller
         mov     eax, [ebp - 12] ; player_y
         mov     edx, [ebp - 16] ; player_x
-        mov     esi, [ebp - 4]  ; new_yx
-        mov     [esi], eax      ; new_yx[0] = player_y
-        mov     [esi + 4], edx  ; new_yx[1] = player_x
+        mov     ecx, [ebp - 4]  ; new_yx
+        mov     [ecx], eax      ; new_yx[0] = player_y
+        mov     [ecx + 4], edx  ; new_yx[1] = player_x
 
         mov     esp, ebp
         pop     ebp
