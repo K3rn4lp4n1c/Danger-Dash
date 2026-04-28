@@ -26,7 +26,7 @@ However, function definitions should go in the corresponding game.c file.
 #define GAME_VERSION "0.0.1-alpha"
 #define MAX_PLAYERS 4
 #define MAX_NAME_LENGTH 20
-#define INITIAL_FRAME_RATE 60000 // microseconds (10 FPS)
+#define INITIAL_FRAME_RATE 60000 // microseconds (60 FPS)
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
@@ -69,6 +69,7 @@ typedef struct {
     Environment *env; // pointer to the environment (4 bytes on 32-bit, 8 bytes on 64-bit)
     States state; // current game state (4 bytes)
     pthread_t input; // thread for handling input (4 bytes on 32-bit, 8 bytes on 64-bit)
+    pthread_mutex_t lock; // mutex for synchronizing access to game state (4 bytes on 32-bit, 8 bytes on 64-bit)
     Player *players[MAX_PLAYERS]; // array of pointers to players (4 bytes per pointer on 32-bit, 8 bytes per pointer on 64-bit)
 } Game;
 
@@ -78,7 +79,8 @@ void helloWorld(), update(Game *), run(Game *), end(Game *), deinit(Game *);
 
 // Internal helper functions
 void __refresh_all_windows__(Game *), __initialize_curses__();
-void __show_initial_screen__(Game *, int, int), __adjust_map__(Game *, int, int);
+void __initial_screen__(Game *, int, int), __adjust_map__(Game *, int, int);
+void __erase_all_windows__(Environment *);
 void* __keypress__(void *), *__player_effect__(void *);
 const wchar_t* __resolve_character__(Characters*);
 
