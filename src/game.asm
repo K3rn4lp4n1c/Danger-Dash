@@ -44,7 +44,6 @@ get_args:
         mov     al, [eax + 1] ; get the second character of the first argument
         cmp     al, 'h' ; check if it's 'h' for help
         je      .print_help
-        ret
 
 .print_help:
         call    help
