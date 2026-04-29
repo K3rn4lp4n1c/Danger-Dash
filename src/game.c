@@ -1,6 +1,6 @@
 #include "game.h"
 
-Game* init(int count, char *names[], Characters characters[]) {
+Game* init(int count, char **names, Characters *characters) {
     __initialize_curses__();
 
     WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
