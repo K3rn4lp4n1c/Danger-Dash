@@ -14,13 +14,6 @@
 #include <wchar.h>
 #include <ncursesw/curses.h>
 
-/*
-This is the header file for the game module.
-This file contains the declarations for structs, constants, and functions related to the game logic.
-You can add more game-related declarations here that can be used in both C and NASM assembly files.
-However, function definitions should go in the corresponding game.c file.
-*/
-
 #define WELCOME_MSG "Hello World!"
 #define GAME_TITLE "Danger Dash"
 #define GAME_VERSION "0.0.1-alpha"

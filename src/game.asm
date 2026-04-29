@@ -1,8 +1,9 @@
 %include "asm_io.inc"
 
 segment .data
+        max       db 4
         help_msg  db "Usage: danger-dash [options]", 10, 0
-        name      db "Player 1", 0
+        name      db "John Doe", 0
         character db 0
 
 segment .bss
