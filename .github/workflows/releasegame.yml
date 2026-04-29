@@ -1,0 +1,34 @@
+name: Danger Dash Release CI
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        xargs -a apt-packages.txt -r sudo apt-get install -y
+
+    - name: Make the binary and check for errors
+      run: make test
+
+    - name: Create release
+      env:
+          GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release create "${GITHUB_REF_NAME}" --verify-tag -p \
+            game.out \
+            --title "Danger Dash ${GITHUB_REF_NAME}" \
+            --notes "Automated Danger Dash ${GITHUB_REF_NAME} release"
