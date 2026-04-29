@@ -1,6 +1,6 @@
 #include "game.h"
 
-Game* init() {
+Game* init(int count, char *names[], Characters characters[]) {
     __initialize_curses__();
 
     WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
@@ -17,16 +17,13 @@ Game* init() {
     env->map = malloc(wgame_height * sizeof(char *));
     for (int i = 0; i < wgame_height; i++) env->map[i] = malloc(wgame_width * sizeof(char));
     
-    // turn this to CLI parsing in asm_main later that will be passed to this function
-    int argc = 1;
     Player *players[MAX_PLAYERS];
     for (int i = 0; i < MAX_PLAYERS; i++) players[i] = NULL;
-    for (int i = 0; i < argc; i++) {
+    for (int i = 0; i < count; i++) {
         Player *player = malloc(sizeof(Player));
-        char player_name[MAX_NAME_LENGTH];
-        snprintf(player_name, sizeof(player_name), "Player%d", i + 1);
-        strncpy(player->name, player_name, MAX_NAME_LENGTH - 1);
-        player->character = (Characters)i;
+        strncpy(player->name, names[i], MAX_NAME_LENGTH - 1);
+        player->name[MAX_NAME_LENGTH - 1] = '\0';
+        player->character = (Characters)characters[i];
         player->state = INACTIVE;
         players[i] = player;
         pthread_mutex_init(&player->lock, NULL);
@@ -36,7 +33,7 @@ Game* init() {
     game->env = env;
     game->state = INACTIVE;
     pthread_mutex_init(&game->lock, NULL);
-    game->player_count = argc;
+    game->player_count = count;
     memcpy(game->players, players, MAX_PLAYERS * sizeof(Player *));
 
     __initial_screen__(game, wgame_height, wgame_width);

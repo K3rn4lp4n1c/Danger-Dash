@@ -1,12 +1,17 @@
 %include "asm_io.inc"
 
 segment .data
-        help_msg db "Usage: danger-dash [options]", 10, 0
+        help_msg  db "Usage: danger-dash [options]", 10, 0
+        name      db "Player 1", 0
+        character db 0
 
 segment .bss
-        argc resd 1
-        argv resd 1
-        game resd 1 ; pointer to the game struct
+        argc       resd 1
+        argv       resd 1
+        game       resd 1 ; pointer to the game struct
+        count      resd 1
+        names      resd 1 ; pointer to array of player names
+        characters resd 1 ; pointer to array of player characters
 
 segment .text
         global  asm_main
@@ -35,13 +40,20 @@ get_args:
         mov     [argv], eax
         mov     eax, [argc]
         cmp     eax, 1
+
+        mov     dword [count], 1 ; hardcode to 1 for now, improve later with CLI parsing
+        mov     dword [names], name ; hardcode for now, improve later with CLI parsing
+        mov     eax,  [character]
+        mov     dword [characters], eax ; hardcode player character for now
+        
         jnle      .resolve_args
         ret
 
 .resolve_args:
-        mov     eax, [argv]
-        mov     eax, [eax + 4] ; skip the first argument (program name)
-        mov     al, [eax + 1] ; get the second character of the first argument
+        mov     eax,  [argv]
+        mov     eax,  [eax + 4]  ; skip the first argument (program name)
+        mov     al,   [eax + 1]  ; get the second character of the first argument
+
         cmp     al, 'h' ; check if it's 'h' for help
         je      .print_help
 
@@ -56,7 +68,11 @@ help:
         ret
 
 game_main:
+        push    dword characters ; pass the characters array pointer
+        push    dword names      ; pass the names array pointer
+        push    dword [count]      ; pass the player count
         call    init_game
+        add     esp, 12 ; clean up the stack after the call
         mov     [game], eax ; store the pointer to the game struct in the game variable
 
 .await_game_start_or_quit:

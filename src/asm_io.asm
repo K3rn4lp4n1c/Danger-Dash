@@ -140,7 +140,11 @@ init_game:
         push    ebp
         mov     ebp, esp
 
+        push    dword [ebp+16] ; push the characters array pointer onto the stack
+        push    dword [ebp+12] ; push the names array pointer onto the stack
+        push    dword [ebp+8]  ; push the player count onto
         call    _init
+        add     esp, 12 ; clean up the stack after the call
 
         mov     esp, ebp
         pop     ebp
