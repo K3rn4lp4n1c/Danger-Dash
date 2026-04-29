@@ -26,7 +26,7 @@ However, function definitions should go in the corresponding game.c file.
 #define GAME_VERSION "0.0.1-alpha"
 #define MAX_PLAYERS 4
 #define MAX_NAME_LENGTH 20
-#define INITIAL_FRAME_RATE 60000 // microseconds (60 FPS)
+#define INITIAL_FRAME_RATE 50000 // ~20 FPS
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
@@ -56,28 +56,26 @@ typedef struct {
 } Input;
 
 typedef struct {
-    WINDOW *wstatus; // window for status info (4 bytes on 32-bit, 8 bytes on 64-bit)
-    WINDOW *wgame; // window for game area (4 bytes on 32-bit, 8 bytes on 64-bit)
-    WINDOW *winfo; // window for player info (4 bytes on 32-bit, 8 bytes on 64-bit)
-    char **map; // 2D array representing the game map (pointer to pointer, 4 bytes on 32-bit, 8 bytes on 64-bit)
-    unsigned long frame_rate; // frame rate in microseconds (4 bytes on 32-bit, 8 bytes on 64-bit)
+    WINDOW *wstatus;
+    WINDOW *wgame;
+    WINDOW *winfo;
+    char **map;
+    unsigned long frame_rate;
 } Environment;
 
 typedef struct {
-    int player_count; // number of active players (4 bytes)
-    int score; // total score (4 bytes)
-    Environment *env; // pointer to the environment (4 bytes on 32-bit, 8 bytes on 64-bit)
-    States state; // current game state (4 bytes)
-    pthread_t input; // thread for handling input (4 bytes on 32-bit, 8 bytes on 64-bit)
-    pthread_mutex_t lock; // mutex for synchronizing access to game state (4 bytes on 32-bit, 8 bytes on 64-bit)
-    Player *players[MAX_PLAYERS]; // array of pointers to players (4 bytes per pointer on 32-bit, 8 bytes per pointer on 64-bit)
+    int player_count;
+    int score;
+    Environment *env;
+    States state;
+    pthread_t input;
+    pthread_mutex_t lock;
+    Player *players[MAX_PLAYERS];
 } Game;
 
-// Available functions to be called from NASM assembly
-Game* init();
+Game* init(int, char **, Characters *);
 void helloWorld(), update(Game *), run(Game *), end(Game *), deinit(Game *);
 
-// Internal helper functions
 void __refresh_all_windows__(Game *), __initialize_curses__();
 void __initial_screen__(Game *, int, int), __adjust_map__(Game *, int, int);
 void __erase_all_windows__(Environment *);
