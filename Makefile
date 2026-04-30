@@ -33,4 +33,4 @@ asm_io.o: $(SRC_DIR)/asm_io.asm
 >nasm $(NASM_FLAGS_32) $< -I $(INC_DIR) -o $@
 
 test: $(TARGET)
->./$(TARGET) --test
+>./$(TARGET) test

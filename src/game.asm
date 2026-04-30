@@ -1,7 +1,7 @@
 %include "asm_io.inc"
 
 segment .data
-        args      dq "help", "version", "players"
+        args      dq "help", "version", "players", "test"
         help_msg  db "Usage: danger-dash [options]", 10, 0
         version_msg db "Danger Dash v0.0.1-beta", 10, 0
         name      db "John Doe", 0
@@ -56,6 +56,12 @@ asm_main:
         call    .compare_string_helper
         je      .get_players
 
+        mov     esi, eax
+        mov     edi, args + 24 ; 'test'
+        mov     ecx, 4 ; length of "test"
+        call    .compare_string_helper
+        je      .test
+
         mov     dword [count], 1 ; hardcode to 1 for now, improve later with CLI parsing
         mov     dword [names], name ; hardcode for now, improve later with CLI parsing
         mov     eax,  [character]
@@ -106,6 +112,10 @@ asm_main:
         add     esi, 4
         inc     edi
         jmp     .get_players_loop
+
+.test:
+        call    hello_world
+        jmp     asm_end
 
 asm_end:
         ; *********** CODE ENDS HERE ***********
