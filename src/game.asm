@@ -1,8 +1,9 @@
 %include "asm_io.inc"
 
 segment .data
-        max       db 4
+        args      dq "help", "version", "players"
         help_msg  db "Usage: danger-dash [options]", 10, 0
+        version_msg db "Danger Dash v0.0.1-beta", 10, 0
         name      db "John Doe", 0
         character db 0
 
@@ -11,8 +12,8 @@ segment .bss
         argv       resd 1
         game       resd 1 ; pointer to the game struct
         count      resd 1
-        names      resd 1 ; pointer to array of player names
-        characters resd 1 ; pointer to array of player characters
+        names      resd 4 ; pointer to array of player names
+        characters resd 4 ; pointer to array of player characters
 
 segment .text
         global  asm_main
@@ -24,48 +25,93 @@ asm_main:
         mov     ebp, esp
         ; ********** CODE STARTS HERE **********
         ; get argc and argv from the stack and store them in argc and argv variables
-        call    get_args
-        call    game_main
-
-asm_end:
-        ; *********** CODE ENDS HERE ***********
-        mov     eax, 0
-        mov     esp, ebp
-        pop     ebp
-        ret
-
-get_args:
         mov     eax, [ebp + 8]
         mov     [argc], eax
         mov     eax, [ebp + 12]
         mov     [argv], eax
         mov     eax, [argc]
         cmp     eax, 1
+        je      .print_help
+
+.resolve_args:
+        mov     eax, [argv]
+        add     eax, 4 ; skip program name
+        mov     eax, [eax] ; get first argument (if any)
+
+        mov     esi, eax
+        mov     edi, args ; 'help'
+        mov     ecx, 4 ; length of "help"
+        call    .compare_string_helper
+        je      .print_help
+
+        mov     esi, eax
+        mov     edi, args + 8 ; 'version'
+        mov     ecx, 7 ; length of "version"
+        call    .compare_string_helper
+        je      .print_version
+
+        mov     esi, eax
+        mov     edi, args + 16 ; 'players'
+        mov     ecx, 7 ; length of "players"
+        call    .compare_string_helper
+        je      .get_players
 
         mov     dword [count], 1 ; hardcode to 1 for now, improve later with CLI parsing
         mov     dword [names], name ; hardcode for now, improve later with CLI parsing
         mov     eax,  [character]
         mov     dword [characters], eax ; hardcode player character for now
-        
-        jnle      .resolve_args
+        jmp     game_main
+
+.compare_string_helper:
+        push    ebp
+        mov     ebp, esp
+
+        cld
+        repe cmpsb
+
+        pop     ebp
         ret
 
-.resolve_args:
-        mov     eax,  [argv]
-        mov     eax,  [eax + 4]  ; skip the first argument (program name)
-        mov     al,   [eax + 1]  ; get the second character of the first argument
-
-        cmp     al, 'h' ; check if it's 'h' for help
-        je      .print_help
-
 .print_help:
-        call    help
-        jmp     asm_end
-
-help:
-        ; Print help message to the console
         mov     eax, help_msg
         call    print_string
+        jmp     asm_end
+
+.print_version:
+        mov     eax, version_msg
+        call    print_string
+        jmp     asm_end
+
+.get_players:
+        ; ./game.out players 2 "Alice:B" "Bob:E" ...
+        mov     eax, [argv]
+        add     eax, 8 ; skip program name and first argument
+        mov     eax, [eax]
+        movzx   ecx, byte [eax] ; get player count argument
+        sub     ecx, '0' ; convert from ASCII to int
+        mov     [count], ecx ; store player count
+
+        mov     esi, [argv]
+        add     esi, 12 ; skip program name and first two arguments
+        xor     edi, edi
+
+.get_players_loop:
+        cmp     edi, ecx
+        jge     game_main
+        mov     eax, [esi]
+        mov     ebx, names
+        mov     [ebx + edi*4], eax
+        mov     dword [characters + edi*4], 0
+
+        add     esi, 4
+        inc     edi
+        jmp     .get_players_loop
+
+asm_end:
+        ; *********** CODE ENDS HERE ***********
+        mov     eax, 0
+        mov     esp, ebp
+        pop     ebp
         ret
 
 game_main:

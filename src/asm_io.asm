@@ -73,6 +73,7 @@ segment .data
 
 int_format          db  "%i", 0
 string_format       db  "%s", 0
+input_format        db  "%19s", 0
 reg_format          db  "Register Dump # %d", NL
                     db  "EAX = %.8X EBX = %.8X ECX = %.8X EDX = %.8X", NL
                     db  "ESI = %.8X EDI = %.8X EBP = %.8X ESP = %.8X", NL
@@ -106,7 +107,7 @@ segment text public align=1 class=code use32
 %else
 segment .text
 %endif
-        global  read_int, print_int, print_string, read_char
+        global  read_int, print_int, print_string, read_char, read_string
         global  print_char, print_nl, sub_dump_regs, sub_dump_mem
         global  sub_dump_math, sub_dump_stack
         ; exposes the read_int, print_int, etc. functions to game.asm
@@ -235,6 +236,26 @@ read_int:
         mov     eax, [ebp-4]
         leave
         ret
+
+read_string:
+        enter   8,0
+        pusha
+        pushf
+
+        lea     eax, [ebp-4]
+        push    eax
+        push    dword [ebp+8] ; buffer to read string into
+        push    dword input_format
+        call    _scanf
+        pop     ecx
+        pop     ecx
+        pop     ecx
+
+        popf
+        popa
+        mov     eax, [ebp-4] ; return value is pointer to buffer where string was read into
+        leave
+        ret     4
 
 print_int:
         enter   0,0

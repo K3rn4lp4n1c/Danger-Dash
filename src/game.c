@@ -1,6 +1,10 @@
 #include "game.h"
 
 Game* init(int count, char **names, Characters *characters) {
+    if (count <= 0 || count > MAX_PLAYERS) {
+        fprintf(stderr, "Player count must be between 1 and %d: %d\n", MAX_PLAYERS, count);
+        exit(EXIT_FAILURE);
+    }
     __initialize_curses__();
 
     WINDOW *wstatus = newwin(LINES / 3, COLS, 0, 0);
