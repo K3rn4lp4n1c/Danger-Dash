@@ -226,6 +226,12 @@ void update(Game *game) {
             game->players[i]->state = INACTIVE;
             pthread_mutex_unlock(&game->players[i]->lock);
             active_players--;
+            if (active_players == 0) {
+                pthread_mutex_lock(&game->lock);
+                game->state = INACTIVE;
+                pthread_mutex_unlock(&game->lock);
+                return;
+            }
         } else if (pstates[i] == IDLE) {
             active_players--;
         } else if (pstates[i] == INACTIVE) {
