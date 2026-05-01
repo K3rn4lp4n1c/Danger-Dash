@@ -1,3 +1,5 @@
+#define MINIAUDIO_IMPLEMENTATION
+
 #include "game.h"
 
 static int __player_color_pair__(Characters c) {
@@ -22,9 +24,9 @@ static int __state_color_pair__(States s) {
 
 static const char *__state_text__(States s) {
     switch (s) {
-        case ACTIVE:   return "ACTIVE";
+        case ACTIVE:
+        case BUSY:   return "ACTIVE";
         case IDLE:     return "PAUSED";
-        case BUSY:     return "MOVING";
         case INACTIVE: return "OUT";
         default:       return "UNKNOWN";
     }
@@ -113,6 +115,7 @@ Game* init(int count, char **names, Characters *characters) {
     pthread_mutex_init(&game->lock, NULL);
     game->player_count = count;
     memcpy(game->players, players, MAX_PLAYERS * sizeof(Player *));
+    __audio_init__(&game->audio, game->player_count > 0 ? MUSIC[players[0]->character] : NULL);
 
     __initial_screen__(game, wgame_height, wgame_width);
     __refresh_all_windows__(game);
@@ -153,6 +156,7 @@ void run(Game *game) {
     int wgame_width = getmaxx(game->env->wgame);
     for (int i = 0; i < wgame_height; i++) memset(game->env->map[i], ' ', wgame_width);
     game->env->frame_rate = INITIAL_FRAME_RATE;
+    __audio_start_music__(&game->audio);
     
     srand(time(NULL));
 
@@ -226,6 +230,12 @@ void update(Game *game) {
             game->players[i]->state = INACTIVE;
             pthread_mutex_unlock(&game->players[i]->lock);
             active_players--;
+            if (active_players == 0) {
+                pthread_mutex_lock(&game->lock);
+                game->state = INACTIVE;
+                pthread_mutex_unlock(&game->lock);
+                return;
+            }
         } else if (pstates[i] == IDLE) {
             active_players--;
         } else if (pstates[i] == INACTIVE) {
@@ -573,10 +583,78 @@ void __refresh_all_windows__(Game *game) {
     doupdate();
 }
 
+int __audio_init__(Audio *audio, const char *music_path) {
+    ma_result result;
+
+    if (audio == NULL) return -1;
+    FILE *file = fopen("log", "w");
+
+    result = ma_engine_init(NULL, &audio->engine);
+    if (result != MA_SUCCESS) {
+        fprintf(file, "ma_engine_init failed: %s\n", ma_result_description(result));
+        fclose(file);
+        return -1;
+    }
+
+    audio->music_loaded = 0;
+
+    if (music_path == NULL) {
+        fprintf(file, "No music path provided.\n");
+        fclose(file);
+        return 0;
+    }
+
+    result = ma_sound_init_from_file(&audio->engine,
+                                     music_path,
+                                     0,   /* for debugging, do not stream yet */
+                                     NULL,
+                                     NULL,
+                                     &audio->music);
+    if (result != MA_SUCCESS) {
+        fprintf(file, "ma_sound_init_from_file('%s') failed: %s\n",
+                music_path, ma_result_description(result));
+                fclose(file);
+        return -2;
+    }
+
+    ma_sound_set_looping(&audio->music, MA_TRUE);
+    ma_sound_set_volume(&audio->music, 1.0f);   /* debug at full volume first */
+    audio->music_loaded = 1;
+
+    fprintf(file, "Loaded audio OK: %s\n", music_path);
+    fclose(file);
+    return 0;
+}
+
+void __audio_play_sfx__(Audio *audio, const char *path){
+    if (audio == NULL || path == NULL) return;
+    ma_engine_play_sound(&audio->engine, path, NULL);
+}
+
+void __audio_start_music__(Audio *audio) {
+    if (audio != NULL && audio->music_loaded) {
+        ma_sound_start(&audio->music);
+    }
+}
+
+void __audio_stop_music__(Audio *audio) {
+    if (audio != NULL && audio->music_loaded) ma_sound_stop(&audio->music);
+}
+
+void __audio_shutdown__(Audio *audio) {
+    if (audio == NULL) return;
+    if (audio->music_loaded) ma_sound_uninit(&audio->music);
+    ma_engine_uninit(&audio->engine);
+}
+
 void end(Game *game) {
     game->state = INACTIVE;
-    for (int i = 0; i < game->player_count; i++) game->players[i]->state = INACTIVE;
     pthread_join(game->input, NULL);
+    
+    for (int i = 0; i < game->player_count; i++) {
+        game->players[i]->state = INACTIVE;
+        __audio_play_sfx__(&game->audio, SOUND_EFFECTS[game->players[i]->character]);
+    }
 
     __erase_all_windows__(game->env);
 
@@ -607,6 +685,7 @@ void end(Game *game) {
 
     __refresh_all_windows__(game);
     timeout(-1);
+    __audio_stop_music__(&game->audio);
 }
 
 void deinit(Game *game) {
@@ -616,6 +695,7 @@ void deinit(Game *game) {
     delwin(game->env->winfo);
     free(game->env->map);
     free(game->env);
+    __audio_shutdown__(&game->audio);
     pthread_mutex_destroy(&game->lock);
     for (int i = 0; i < game->player_count; i++) {
         pthread_mutex_destroy(&game->players[i]->lock);
