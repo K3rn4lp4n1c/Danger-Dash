@@ -234,9 +234,8 @@ void update(Game *game) {
     }
 
     pthread_mutex_lock(&game->lock);
-    if (active_players <= 0) game->state = INACTIVE;
-    else if (gState == ACTIVE && active_players < game->player_count) game->state = IDLE;
-    else if (gState == IDLE && active_players == game->player_count) game->state = ACTIVE;
+    if (gState == ACTIVE && active_players < game->player_count) game->state = IDLE;
+    if (gState == IDLE && active_players == game->player_count) game->state = ACTIVE;
     pthread_mutex_unlock(&game->lock);
 
     if (gState == ACTIVE) __adjust_map__(game, wgame_height, wgame_width);
