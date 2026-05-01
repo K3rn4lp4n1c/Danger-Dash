@@ -682,7 +682,9 @@ void __audio_shutdown__(Audio *audio) {
 }
 
 void end(Game *game) {
+    pthread_mutex_lock(&game->lock);
     game->state = INACTIVE;
+    pthread_mutex_unlock(&game->lock);
     pthread_join(game->input, NULL);
     
     for (int i = 0; i < game->player_count; i++) {
@@ -703,6 +705,17 @@ void end(Game *game) {
                     game->predecessors[i] = new_record;
                 }
                 break;
+            }
+        }
+        // sort predecessors by score descending
+        for (int i = 0; i < MAX_PREDECESSORS - 1; i++) {
+            for (int j = 0; j < MAX_PREDECESSORS - i - 1; j++) {
+                if (game->predecessors[j] != NULL && game->predecessors[j + 1] != NULL &&
+                    game->predecessors[j]->score < game->predecessors[j + 1]->score) {
+                    Record *temp = game->predecessors[j];
+                    game->predecessors[j] = game->predecessors[j + 1];
+                    game->predecessors[j + 1] = temp;
+                }
             }
         }
 
