@@ -587,7 +587,7 @@ int __audio_init__(Audio *audio, const char *music_path) {
     ma_result result;
 
     if (audio == NULL) return -1;
-    FILE *file = fopen("log", "w");
+    FILE *file = fopen(LOG_FILE, "a");
 
     result = ma_engine_init(NULL, &audio->engine);
     if (result != MA_SUCCESS) {

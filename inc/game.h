@@ -22,6 +22,7 @@
 #define MAX_PLAYERS 4
 #define MAX_NAME_LENGTH 20
 #define INITIAL_FRAME_RATE 50000 // ~20 FPS
+#define LOG_FILE "danger_dash.log"
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
