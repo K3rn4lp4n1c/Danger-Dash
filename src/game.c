@@ -76,6 +76,25 @@ static void __draw_hud__(Game *game, int positions[MAX_PLAYERS][2], States pstat
     mvwprintw(env->winfo, info_h - 2, 2, "Move: Arrow Keys   Pause: BACKSPACE   Quit: ESC");
 }
 
+static void __draw_rankings__(Game *game) {
+    if (game == NULL || game->env == NULL || game->env->winfo == NULL) return;
+    Environment *env = game->env;
+    int start_row = 6;
+
+    if (has_colors()) wattron(env->winfo, COLOR_PAIR(3) | A_BOLD);
+    mvwprintw(env->winfo, start_row - 1, 2, " TOP SCORES ");
+    if (has_colors()) wattroff(env->winfo, COLOR_PAIR(3) | A_BOLD);
+
+    for (int i = 0; i < MAX_PREDECESSORS; ++i) {
+        if (game->predecessors[i]) {
+            mvwprintw(env->winfo, start_row + i, 2, "%d. %-12s %6d", i + 1,
+                      game->predecessors[i]->name, game->predecessors[i]->score);
+        } else {
+            mvwprintw(env->winfo, start_row + i, 2, "%d. %-12s %6s", i + 1, "---", "0");
+        }
+    }
+}
+
 Game* init(int count, char **names, Characters *characters) {
     if (count <= 0 || count > MAX_PLAYERS) {
         fprintf(stderr, "Player count must be between 1 and %d: %d\n", MAX_PLAYERS, count);
@@ -116,6 +135,20 @@ Game* init(int count, char **names, Characters *characters) {
     game->player_count = count;
     memcpy(game->players, players, MAX_PLAYERS * sizeof(Player *));
     __audio_init__(&game->audio, game->player_count > 0 ? MUSIC[players[0]->character] : NULL);
+
+    FILE *file = fopen(RANKING_FILE, "rb");
+    if (file != NULL) {
+        Record buf[MAX_PREDECESSORS];
+        size_t read = fread(buf, sizeof(Record), MAX_PREDECESSORS, file);
+        for (size_t i = 0; i < read; ++i) {
+            game->predecessors[i] = malloc(sizeof(Record));
+            *game->predecessors[i] = buf[i];
+        }
+        for (size_t i = read; i < MAX_PREDECESSORS; ++i) game->predecessors[i] = NULL;
+        fclose(file);
+    } else {
+        for (size_t i = 0; i < MAX_PREDECESSORS; ++i) game->predecessors[i] = NULL;
+    }
 
     __initial_screen__(game, wgame_height, wgame_width);
     __refresh_all_windows__(game);
@@ -347,6 +380,7 @@ void __initial_screen__(Game *game, int wgame_height, int wgame_width) {
     if (has_colors()) wattroff(env->wgame, COLOR_PAIR(3) | A_BOLD);
 
     mvwprintw(env->wgame, quit_y, (wgame_width - (int)strlen(quit_msg)) / 2, "%s", quit_msg);
+    __draw_rankings__(game);
 }
 
 void __adjust_map__(Game *game, int wgame_height, int wgame_width) {
@@ -656,6 +690,34 @@ void end(Game *game) {
         __audio_play_sfx__(&game->audio, SOUND_EFFECTS[game->players[i]->character]);
     }
 
+    if (game->player_count == 1) {
+        for (int i = 0; i < MAX_PREDECESSORS; i++) {
+            if (game->predecessors[i] == NULL || game->predecessors[i]->score < game->score) {
+                if (game->predecessors[i] != NULL) free(game->predecessors[i]);
+                Record *new_record = malloc(sizeof(Record));
+                if (new_record != NULL) {
+                    strncpy(new_record->name, game->players[0]->name, MAX_NAME_LENGTH - 1);
+                    new_record->name[MAX_NAME_LENGTH - 1] = '\0';
+                    new_record->character = game->players[0]->character;
+                    new_record->score = game->score;
+                    game->predecessors[i] = new_record;
+                }
+                break;
+            }
+        }
+
+        FILE *file = fopen(RANKING_FILE, "wb");
+        if (file != NULL) {
+            Record out[MAX_PREDECESSORS];
+            for (int i = 0; i < MAX_PREDECESSORS; ++i) {
+                if (game->predecessors[i]) out[i] = *game->predecessors[i];
+                else { memset(out[i].name, 0, MAX_NAME_LENGTH); out[i].score = 0; out[i].character = 0; }
+            }
+            fwrite(out, sizeof(Record), MAX_PREDECESSORS, file);
+            fclose(file);
+        }
+    }
+
     __erase_all_windows__(game->env);
 
     __draw_panel__(game->env->wstatus, " RUN OVER ", 1);
@@ -700,6 +762,12 @@ void deinit(Game *game) {
     for (int i = 0; i < game->player_count; i++) {
         pthread_mutex_destroy(&game->players[i]->lock);
         free(game->players[i]);
+    }
+    for (int i = 0; i < MAX_PREDECESSORS; ++i) {
+        if (game->predecessors[i]) {
+            free(game->predecessors[i]);
+            game->predecessors[i] = NULL;
+        }
     }
     free(game);
     endwin();
