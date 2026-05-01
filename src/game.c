@@ -163,11 +163,11 @@ void update(Game *game) {
 
 const wchar_t *__resolve_character__(Characters *character) {
     switch (*character) {
-        case Benjamin: return L"▲";
-        case Ethan: return L"■";
-        case Muhammad: return L"◆";
-        case Youssef: return L"●";
-        default: return L"?";
+        case Benjamin: return L"🥷";
+        case Ethan: return L"👨";
+        case Muhammad: return L"👳🏻";
+        case Youssef: return L"🕵";
+        default: return L"❓";
     }
 }
 
