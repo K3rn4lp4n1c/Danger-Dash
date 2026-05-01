@@ -19,6 +19,7 @@ jobs:
 
     - name: Install build tools
       run: |
+        sudo dpkg --add-architecture i386
         sudo apt-get update
         xargs -a apt-packages.txt -r sudo apt-get install -y
 
