@@ -35,8 +35,8 @@ typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
 const char *MUSIC[] = {
     "assets/benjamin.mp3",
-    "assets/ethan.wav",
-    "assets/muhammad.wav",
+    "assets/ethan.mp3",
+    "assets/muhammad.mp3",
     "assets/test.wav",
 };
 const char *SOUND_EFFECTS[] = {
