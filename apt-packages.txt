@@ -5,3 +5,5 @@ gcc-multilib
 libc6-dev-i386
 lib32gcc-s1
 lib32ncurses-dev
+libasound2t64:i386
+libpulse0:i386

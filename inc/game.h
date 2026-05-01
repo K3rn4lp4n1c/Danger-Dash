@@ -2,6 +2,7 @@
 #define GAME_H
 
 #define _XOPEN_SOURCE_EXTENDED 1
+#define MA_NO_NULL
 
 #include <stdlib.h>
 #include <time.h>
@@ -13,6 +14,7 @@
 #include <locale.h>
 #include <wchar.h>
 #include <ncursesw/curses.h>
+#include "miniaudio.h"
 
 #define WELCOME_MSG "Hello World!"
 #define GAME_TITLE "Danger Dash"
@@ -31,7 +33,27 @@ typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
 typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
 
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
-const double OBSTACLE_ODDS = 0.05; // 10% chance of new obstacle each frame
+const char *MUSIC[] = {
+    "assets/benjamin.mp3",
+    "assets/ethan.wav",
+    "assets/muhammad.wav",
+    "assets/test.wav",
+};
+const char *SOUND_EFFECTS[] = {
+    "assets/victory.mp3",
+    "assets/smokeweed.mp3",
+    "assets/kaboom.mp3",
+    "assets/allahuakbar.mp3",
+};
+
+const double OBSTACLE_ODDS = 0.01; // 1% chance of new obstacle each frame
+
+
+typedef struct {
+    ma_engine engine;
+    ma_sound music;
+    int music_loaded;
+} Audio;
 
 typedef struct {
     char name[MAX_NAME_LENGTH];
@@ -64,6 +86,7 @@ typedef struct {
     pthread_t input;
     pthread_mutex_t lock;
     Player *players[MAX_PLAYERS];
+    Audio audio;
 } Game;
 
 Game* init(int, char **, Characters *);
@@ -75,4 +98,9 @@ void __erase_all_windows__(Environment *);
 void* __keypress__(void *), *__player_effect__(void *);
 const wchar_t* __resolve_character__(Characters*);
 
+int __audio_init__(Audio *audio, const char *music_path);
+void __audio_play_sfx__(Audio *audio, const char *path);
+void __audio_start_music__(Audio *audio);
+void __audio_stop_music__(Audio *audio);
+void __audio_shutdown__(Audio *audio);
 #endif
