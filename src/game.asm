@@ -1,11 +1,11 @@
 %include "asm_io.inc"
 
 segment .data
-        args      dq "help", "version", "players", "test"
-        help_msg  db "Usage: danger-dash [options]", 10, 0
-        version_msg db "Danger Dash v0.0.1-beta", 10, 0
-        name      db "John Doe", 0
-        character db 0
+        game_args     dq "help", "version", "players", "test"
+        help_message  db "Usage: danger-dash [options]", 10, 0
+        version_msg   db "Danger Dash v0.0.1-beta", 10, 0
+        play_err_msg  db "Error: Invalid player arguments. Usage: danger-dash players <count> <name:char> ...", 10, 0
+        default_name  db "John Doe", 0
 
 segment .bss
         argc       resd 1
@@ -31,41 +31,46 @@ asm_main:
         mov     [argv], eax
         mov     eax, [argc]
         cmp     eax, 1
-        je      .print_help
+        je      .default
 
 .resolve_args:
         mov     eax, [argv]
         add     eax, 4 ; skip program name
-        mov     eax, [eax] ; get first argument (if any)
+        mov     eax, [eax] ; get first argument
 
         mov     esi, eax
-        mov     edi, args ; 'help'
+        mov     edi, game_args ; 'help'
         mov     ecx, 4 ; length of "help"
         call    .compare_string_helper
         je      .print_help
 
         mov     esi, eax
-        mov     edi, args + 8 ; 'version'
+        mov     edi, game_args + 8 ; 'version'
         mov     ecx, 7 ; length of "version"
         call    .compare_string_helper
         je      .print_version
 
         mov     esi, eax
-        mov     edi, args + 16 ; 'players'
+        mov     edi, game_args + 16 ; 'players'
         mov     ecx, 7 ; length of "players"
         call    .compare_string_helper
         je      .get_players
 
         mov     esi, eax
-        mov     edi, args + 24 ; 'test'
+        mov     edi, game_args + 24 ; 'test'
         mov     ecx, 4 ; length of "test"
         call    .compare_string_helper
         je      .test
 
-        mov     dword [count], 1 ; hardcode to 1 for now, improve later with CLI parsing
-        mov     dword [names], name ; hardcode for now, improve later with CLI parsing
-        mov     eax,  [character]
-        mov     dword [characters], eax ; hardcode player character for now
+.print_help:
+        mov     eax, help_message
+        call    print_string
+        jmp     asm_end
+
+.default:
+        mov     dword [count], 1
+        mov     dword [names], default_name
+        mov     dword [characters], 0
         jmp     game_main
 
 .compare_string_helper:
@@ -73,15 +78,10 @@ asm_main:
         mov     ebp, esp
 
         cld
-        repe cmpsb
+        repe    cmpsb
 
         pop     ebp
         ret
-
-.print_help:
-        mov     eax, help_msg
-        call    print_string
-        jmp     asm_end
 
 .print_version:
         mov     eax, version_msg
@@ -95,11 +95,21 @@ asm_main:
         mov     eax, [eax]
         movzx   ecx, byte [eax] ; get player count argument
         sub     ecx, '0' ; convert from ASCII to int
+        cmp     ecx, 0
+        jle     .get_players_err ; player count must be > 0
         mov     [count], ecx ; store player count
 
         mov     esi, [argv]
         add     esi, 12 ; skip program name and first two arguments
+        cmp     dword [argc], 3
+        jle     .get_players_err ; need at least 3 arguments for players mode
         xor     edi, edi
+        jmp     .get_players_loop
+
+.get_players_err:
+        mov     eax, play_err_msg
+        call    print_string
+        jmp     asm_end
 
 .get_players_loop:
         cmp     edi, ecx
