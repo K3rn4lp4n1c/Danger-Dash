@@ -114,11 +114,64 @@ asm_main:
 .get_players_loop:
         cmp     edi, ecx
         jge     game_main
-        mov     eax, [esi]
-        mov     ebx, names
-        mov     [ebx + edi*4], eax
+        mov     eax, [esi]         ; eax = argv string pointer
+        mov     edx, eax          ; edx = scan pointer
+
+.find_colon_loop:
+        mov     bl, [edx]
+        cmp     bl, 0
+        je      .no_colon
+        cmp     bl, ':'
+        je      .have_colon
+        inc     edx
+        jmp     .find_colon_loop
+
+.have_colon:
+        cmp     byte [edx+1], 0    ; ensure char exists after ':'
+        je      .no_colon         ; treat as no-char -> default
+        mov     byte [edx], 0     ; terminate name at ':'
+        mov     bl, [edx+1]       ; read character letter
+
+        cmp     bl, 'B'
+        je      .set_B
+        cmp     bl, 'b'
+        je      .set_B
+        cmp     bl, 'E'
+        je      .set_E
+        cmp     bl, 'e'
+        je      .set_E
+        cmp     bl, 'M'
+        je      .set_M
+        cmp     bl, 'm'
+        je      .set_M
+        cmp     bl, 'Y'
+        je      .set_Y
+        cmp     bl, 'y'
+        je      .set_Y
+        jmp     .set_default
+
+.set_B:
+        mov     dword [characters + edi*4], 0
+        jmp     .store_name
+.set_E:
+        mov     dword [characters + edi*4], 1
+        jmp     .store_name
+.set_M:
+        mov     dword [characters + edi*4], 2
+        jmp     .store_name
+.set_Y:
+        mov     dword [characters + edi*4], 3
+        jmp     .store_name
+.set_default:
+        mov     dword [characters + edi*4], 0
+        jmp     .store_name
+
+.no_colon:
         mov     dword [characters + edi*4], 0
 
+.store_name:
+        mov     ebx, names
+        mov     [ebx + edi*4], eax    ; names[edi] = pointer to NUL-terminated name
         add     esi, 4
         inc     edi
         jmp     .get_players_loop

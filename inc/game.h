@@ -20,8 +20,11 @@
 #define GAME_TITLE "Danger Dash"
 #define GAME_VERSION "0.0.1-alpha"
 #define MAX_PLAYERS 4
+#define MAX_PREDECESSORS 5
 #define MAX_NAME_LENGTH 20
 #define INITIAL_FRAME_RATE 50000 // ~20 FPS
+#define LOG_FILE "danger_dash.log"
+#define RANKING_FILE "danger_dash.bin"
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
@@ -35,8 +38,8 @@ typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
 const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
 const char *MUSIC[] = {
     "assets/benjamin.mp3",
-    "assets/ethan.wav",
-    "assets/muhammad.wav",
+    "assets/ethan.mp3",
+    "assets/muhammad.mp3",
     "assets/test.wav",
 };
 const char *SOUND_EFFECTS[] = {
@@ -48,12 +51,17 @@ const char *SOUND_EFFECTS[] = {
 
 const double OBSTACLE_ODDS = 0.01; // 1% chance of new obstacle each frame
 
-
 typedef struct {
     ma_engine engine;
     ma_sound music;
     int music_loaded;
 } Audio;
+
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    int score;
+    Characters character;
+} Record;
 
 typedef struct {
     char name[MAX_NAME_LENGTH];
@@ -87,6 +95,7 @@ typedef struct {
     pthread_mutex_t lock;
     Player *players[MAX_PLAYERS];
     Audio audio;
+    Record *predecessors[MAX_PREDECESSORS];
 } Game;
 
 Game* init(int, char **, Characters *);

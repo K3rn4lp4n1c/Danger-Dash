@@ -39,3 +39,9 @@
 
 # debug information files
 *.dwo
+
+# Log files
+*.log
+
+# Binary data files
+*.bin
