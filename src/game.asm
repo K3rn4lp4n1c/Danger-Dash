@@ -88,6 +88,11 @@ asm_main:
         call    print_string
         jmp     asm_end
 
+.test:
+        mov     eax, help_message
+        call    print_string
+        jmp     asm_end
+
 .get_players:
         ; ./game.out players 2 "Alice:B" "Bob:E" ...
         mov     eax, [argv]
@@ -175,10 +180,6 @@ asm_main:
         add     esi, 4
         inc     edi
         jmp     .get_players_loop
-
-.test:
-        call    hello_world
-        jmp     asm_end
 
 asm_end:
         ; *********** CODE ENDS HERE ***********
