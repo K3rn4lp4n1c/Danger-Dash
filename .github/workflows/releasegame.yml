@@ -24,7 +24,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       run: |
         make package
-        gh release create "${GITHUB_REF_NAME}" --verify-tag -p \
+        gh release create "${GITHUB_REF_NAME}" --verify-tag \
             danger-dash \
             --title "Danger Dash ${GITHUB_REF_NAME}" \
             --notes "Automated Danger Dash ${GITHUB_REF_NAME} release"
