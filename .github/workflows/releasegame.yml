@@ -23,7 +23,7 @@ jobs:
       env:
           GH_TOKEN: ${{ github.token }}
       run: |
-        make build
+        make package
         gh release create "${GITHUB_REF_NAME}" --verify-tag -p \
             danger-dash \
             --title "Danger Dash ${GITHUB_REF_NAME}" \

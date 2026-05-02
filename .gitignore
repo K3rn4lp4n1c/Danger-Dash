@@ -45,3 +45,6 @@
 
 # Binary data files
 *.bin
+
+# Danger Dash package
+danger-dash
