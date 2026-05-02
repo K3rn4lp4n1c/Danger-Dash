@@ -18,13 +18,10 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install build tools
-      run: |
-        sudo dpkg --add-architecture i386
-        sudo apt-get update
-        xargs -a apt-packages.txt -r sudo apt-get install -y
+      run: make install
 
-    - name: Install dependencies
+    - name: Build dynamically linked game
       run: make
 
-    - name: Run test
+    - name: Run test on dynamically linked game
       run: make test
