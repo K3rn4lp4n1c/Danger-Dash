@@ -27,6 +27,7 @@ all: $(TARGET)
 build: $(STATIC_TARGET)
 
 install:
+>sudo dpkg --add-architecture i386
 >sudo apt-get update
 >sudo apt-get install -y $(PKGS)
 
