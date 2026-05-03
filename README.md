@@ -501,4 +501,3 @@ The current codebase is functional, but still has a few rough edges:
 ## License
 
 This project is licensed under the **MIT License**. See the [`LICENSE`](./LICENSE) file for details.
-```

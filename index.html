@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Danger Dash — CS Presentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a0f;
+    --panel: #0c1219;
+    --border: #1a2a1a;
+    --green: #00ff41;
+    --green-dim: #00aa2a;
+    --green-glow: rgba(0,255,65,0.15);
+    --red: #ff2d55;
+    --yellow: #ffd60a;
+    --cyan: #00e5ff;
+    --white: #e8f5e9;
+    --muted: #4a6a4a;
+    --accent: #39ff14;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    height: 100vh;
+    overflow: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--green);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    box-shadow: 0 0 12px var(--green), 0 0 24px var(--green-dim);
+    transition: transform 0.1s;
+    mix-blend-mode: screen;
+  }
+
+  /* Scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Slide container */
+  .deck {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px 64px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: none;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+
+  .slide.exit {
+    opacity: 0;
+    transform: translateX(-60px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  /* ── SLIDE LAYOUTS ── */
+  .slide-title {
+    text-align: center;
+  }
+
+  .slide-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    width: 100%;
+    max-width: 1100px;
+    align-items: start;
+  }
+
+  .slide-wide {
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.7;
+  }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(48px, 7vw, 90px);
+    font-weight: 900;
+    color: var(--green);
+    text-shadow: 0 0 30px var(--green), 0 0 60px rgba(0,255,65,0.3);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  h1 .danger { color: var(--red); text-shadow: 0 0 30px var(--red); }
+
+  h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(22px, 3.5vw, 38px);
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 32px;
+    letter-spacing: 1px;
+  }
+
+  h3 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--green-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 20px;
+  }
+
+  /* ── TERMINAL CARD ── */
+  .term {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,255,65,0.04), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .term-bar {
+    background: #111c11;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+  .term-title { font-size: 11px; color: var(--muted); margin-left: 8px; letter-spacing: 2px; }
+
+  .term-body {
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.9;
+  }
+
+  /* ── CODE HIGHLIGHT ── */
+  .kw { color: var(--cyan); }
+  .fn { color: var(--yellow); }
+  .str { color: var(--red); }
+  .cm { color: var(--muted); font-style: italic; }
+  .num { color: var(--green); }
+  .prompt { color: var(--green); }
+  .out { color: var(--white); opacity: 0.7; }
+
+  /* ── PILLS / TAGS ── */
+  .pill {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .pill-green { background: rgba(0,255,65,0.12); color: var(--green); border: 1px solid rgba(0,255,65,0.3); }
+  .pill-red   { background: rgba(255,45,85,0.12);  color: var(--red);   border: 1px solid rgba(255,45,85,0.3); }
+  .pill-cyan  { background: rgba(0,229,255,0.12);  color: var(--cyan);  border: 1px solid rgba(0,229,255,0.3); }
+  .pill-yellow{ background: rgba(255,214,10,0.12); color: var(--yellow);border: 1px solid rgba(255,214,10,0.3); }
+
+  /* ── LISTS ── */
+  .item-list { list-style: none; }
+  .item-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .item-list li::before { content: '▸'; color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+  /* ── PERSON CARDS ── */
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .person-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .person-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .card-benji::before { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+  .card-muhammad::before { background: linear-gradient(90deg, var(--red), var(--yellow)); }
+  .card-ethan::before { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+
+  .person-emoji { font-size: 40px; margin-bottom: 12px; display: block; }
+  .person-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+  .person-role {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .person-tasks { font-size: 12px; line-height: 1.8; color: #7aaa7a; text-align: left; }
+  .person-tasks span { display: block; }
+  .person-tasks span::before { content: '→ '; color: var(--green); }
+
+  /* ── ARCH DIAGRAM ── */
+  .arch {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 0;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .arch-layer {
+    border: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+  }
+
+  .arch-layer:first-child { border-radius: 8px 8px 0 0; background: rgba(0,229,255,0.05); border-color: rgba(0,229,255,0.3); }
+  .arch-layer:nth-child(2) { background: rgba(0,255,65,0.05); border-color: rgba(0,255,65,0.3); border-top: none; }
+  .arch-layer:last-child { border-radius: 0 0 8px 8px; background: rgba(255,214,10,0.05); border-color: rgba(255,214,10,0.3); border-top: none; }
+
+  .arch-icon { font-size: 22px; flex-shrink: 0; }
+  .arch-label { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; width: 120px; }
+  .arch-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .arch-arrow { text-align: center; font-size: 18px; color: var(--muted); padding: 4px; }
+
+  /* ── FLOW ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .flow-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 20px;
+    text-align: center;
+    font-size: 12px;
+    min-width: 120px;
+  }
+
+  .flow-box .fb-title { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--green); margin-bottom: 4px; }
+  .flow-box .fb-sub { color: var(--muted); font-size: 10px; }
+  .flow-arrow { color: var(--green); font-size: 20px; padding: 0 8px; }
+
+  /* ── STAT BOXES ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green);
+  }
+
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-top: 6px; text-transform: uppercase; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 100;
+    background: rgba(6,10,15,0.9);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 10px 24px;
+    backdrop-filter: blur(10px);
+  }
+
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .nav-btn:hover {
+    background: var(--green-glow);
+    border-color: var(--green);
+    text-shadow: 0 0 10px var(--green);
+  }
+
+  .slide-counter {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* dot nav */
+  .dot-nav {
+    position: fixed;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+
+  .dot-nav .dn {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .dot-nav .dn.active {
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    width: 6px; height: 18px;
+    border-radius: 3px;
+  }
+
+  /* glitch animation for title */
+  @keyframes glitch {
+    0%, 100% { text-shadow: 0 0 30px var(--green), 0 0 60px rgba(0,255,65,0.3); transform: translate(0); }
+    20% { text-shadow: -2px 0 var(--red), 2px 0 var(--cyan); transform: translate(1px, 0); }
+    40% { text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); transform: translate(-1px, 0); }
+    60% { text-shadow: 0 0 30px var(--green); transform: translate(0); }
+  }
+
+  .glitch { animation: glitch 4s infinite; }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .blink { animation: blink 1s infinite; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide.active .animate-in {
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  .slide.active .animate-in:nth-child(1) { animation-delay: 0.1s; opacity: 0; }
+  .slide.active .animate-in:nth-child(2) { animation-delay: 0.2s; opacity: 0; }
+  .slide.active .animate-in:nth-child(3) { animation-delay: 0.3s; opacity: 0; }
+  .slide.active .animate-in:nth-child(4) { animation-delay: 0.4s; opacity: 0; }
+  .slide.active .animate-in:nth-child(5) { animation-delay: 0.5s; opacity: 0; }
+
+  /* bg grid */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .slide > * { position: relative; z-index: 1; }
+
+  /* ── RESPONSIVE TEXT ── */
+  @media (max-height: 700px) {
+    h1 { font-size: 56px; }
+    h2 { font-size: 24px; }
+    .team-grid { gap: 12px; }
+    .person-card { padding: 18px 16px; }
+    .stats { gap: 10px; }
+    nav { bottom: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="bg-grid"></div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════════════════ -->
+<div class="deck">
+
+<div class="slide active slide-title" id="s0">
+  <div class="tag animate-in">Assembly &amp; C Systems Programming — Final Project</div>
+  <h1 class="glitch animate-in"><span class="danger">DANGER</span><br>DASH</h1>
+  <p class="subtitle animate-in">A terminal-based endless runner in x86 NASM + C</p>
+  <div style="margin-top:40px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;" class="animate-in">
+    <span class="pill pill-green">NASM x86</span>
+    <span class="pill pill-cyan">C / ncursesw</span>
+    <span class="pill pill-yellow">pthreads</span>
+    <span class="pill pill-red">32-bit ELF</span>
+  </div>
+  <div style="margin-top:48px; color:var(--muted); font-size:12px; letter-spacing:2px;" class="animate-in">
+    Benjamin &nbsp;·&nbsp; Muhammad &nbsp;·&nbsp; Ethan
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 2 — WHAT IS IT
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div style="width:100%;max-width:1000px;">
+    <div class="tag animate-in">Overview</div>
+    <h2 class="animate-in">What is Danger Dash?</h2>
+    <div class="slide-split animate-in">
+      <div>
+        <div class="term">
+          <div class="term-bar">
+            <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            <span class="term-title">GAME_DESCRIPTION.txt</span>
+          </div>
+          <div class="term-body">
+<span class="prompt">$</span> <span class="out">./game.out</span><br><br>
+<span class="cm">// A terminal-based 2D endless runner</span><br>
+<span class="cm">// built from scratch using:</span><br><br>
+<span class="kw">Languages</span>   → C + x86 NASM Assembly<br>
+<span class="kw">Rendering</span>   → ncursesw (terminal UI)<br>
+<span class="kw">Threading</span>   → POSIX pthreads<br>
+<span class="kw">Target</span>      → 32-bit Linux ELF<br>
+<span class="kw">Build</span>       → GCC + NASM Makefile<br><br>
+<span class="cm">// Player dodges obstacles in a</span><br>
+<span class="cm">// scrolling world that speeds up</span><br>
+<span class="cm">// as your score increases.</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <ul class="item-list" style="font-size:13px;">
+          <li>Scrolling world — map shifts left each frame, new obstacles spawn from the right</li>
+          <li>Jump mechanics — player can jump over ground obstacles, duck under air hazards</li>
+          <li>Collision detection — per-cell map lookup in assembly (<code>check_for_collision</code>)</li>
+          <li>Dynamic difficulty — frame rate speeds up as score climbs</li>
+          <li>Multi-threaded — separate threads for game loop, input, and player movement</li>
+          <li>Unicode player characters rendered with <code>mvwaddwstr</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 3 — ARCHITECTURE
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div style="width:100%;max-width:1000px;">
+    <div class="tag animate-in">System Design</div>
+    <h2 class="animate-in">Architecture</h2>
+    <div class="slide-split animate-in">
+      <div>
+        <div class="arch">
+          <div class="arch-layer">
+            <div class="arch-icon">🖥️</div>
+            <div>
+              <div class="arch-label" style="color:var(--cyan);">C Layer</div>
+              <div class="arch-desc">Init, rendering, input loop, threading, ncursesw windows</div>
+            </div>
+          </div>
+          <div class="arch-arrow">⇅ shared memory / function calls</div>
+          <div class="arch-layer">
+            <div class="arch-icon">⚙️</div>
+            <div>
+              <div class="arch-label" style="color:var(--green);">ASM Layer</div>
+              <div class="arch-desc">Player movement, collision, obstacle logic, score updates</div>
+            </div>
+          </div>
+          <div class="arch-arrow">⇅ map array (char**)</div>
+          <div class="arch-layer">
+            <div class="arch-icon">🗺️</div>
+            <div>
+              <div class="arch-label" style="color:var(--yellow);">Shared State</div>
+              <div class="arch-desc">Game struct in heap — both sides read/write via pointer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>File breakdown</h3>
+        <ul class="item-list" style="font-size:12px;">
+          <li><code style="color:var(--yellow);">src/game.c</code> — core game engine, rendering, threading</li>
+          <li><code style="color:var(--yellow);">src/game.asm</code> — movement, collision, map logic (67% of codebase)</li>
+          <li><code style="color:var(--yellow);">src/driver.c</code> — C main(), calls asm_main()</li>
+          <li><code style="color:var(--yellow);">src/asm_io.asm</code> — I/O wrappers (printf, scanf bridges)</li>
+          <li><code style="color:var(--yellow);">inc/game.h</code> — all structs, constants, prototypes</li>
+          <li><code style="color:var(--yellow);">Makefile</code> — 4-step build: asm → obj → link</li>
+        </ul>
+        <div style="margin-top:20px;">
+          <div class="stats" style="grid-template-columns: repeat(2,1fr);">
+            <div class="stat"><div class="stat-val">67%</div><div class="stat-label">Assembly</div></div>
+            <div class="stat"><div class="stat-val">30%</div><div class="stat-label">C Code</div></div>
+            <div class="stat"><div class="stat-val">42</div><div class="stat-label">Commits</div></div>
+            <div class="stat"><div class="stat-val">3</div><div class="stat-label">Threads</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 4 — TEAM ROLES
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="tag animate-in">Team Breakdown</div>
+  <h2 class="animate-in">Who Did What</h2>
+  <div class="team-grid animate-in">
+
+    <div class="person-card card-benji">
+      <span class="person-emoji">🥷</span>
+      <div class="person-name">Benjamin</div>
+      <div class="person-role">Lead Developer</div>
+      <div class="person-tasks">
+        <span>Game loop & update cycle</span>
+        <span>ncursesw rendering engine</span>
+        <span>Obstacle map & scrolling</span>
+        <span>Threading architecture</span>
+        <span>Score / speed system</span>
+        <span>Game Over screen</span>
+        <span>Title / start screen</span>
+      </div>
+    </div>
+
+    <div class="person-card card-muhammad">
+      <span class="person-emoji">🕵️</span>
+      <div class="person-name">Muhammad</div>
+      <div class="person-role">Input Systems</div>
+      <div class="person-tasks">
+        <span>__keypress__ thread</span>
+        <span>Keyboard event routing</span>
+        <span>Pause / resume logic</span>
+        <span>Multi-player key mapping</span>
+        <span>ESC / Backspace handling</span>
+        <span>Player state transitions</span>
+      </div>
+    </div>
+
+    <div class="person-card card-ethan">
+      <span class="person-emoji">👨</span>
+      <div class="person-name">Ethan</div>
+      <div class="person-role">Initialization</div>
+      <div class="person-tasks">
+        <span>init() — game bootstrap</span>
+        <span>ncurses color pairs setup</span>
+        <span>Window layout (3-panel)</span>
+        <span>Player struct creation</span>
+        <span>Memory allocation</span>
+        <span>deinit() cleanup</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 5 — THREADING
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div style="width:100%;max-width:1000px;">
+    <div class="tag animate-in">Concurrency</div>
+    <h2 class="animate-in">Threading Model</h2>
+    <div class="slide-split animate-in">
+      <div>
+        <div class="flow" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="flow-box" style="width:100%; border-color:rgba(0,229,255,0.4);">
+            <div class="fb-title" style="color:var(--cyan);">MAIN THREAD</div>
+            <div class="fb-sub">game loop → update() → usleep(frame_rate)</div>
+          </div>
+          <div style="color:var(--green); padding-left:24px;">↓ pthread_create</div>
+          <div class="flow-box" style="width:100%; border-color:rgba(255,45,85,0.4);">
+            <div class="fb-title" style="color:var(--red);">INPUT THREAD — __keypress__</div>
+            <div class="fb-sub">Muhammad · blocks on getch() with timeout(50ms)</div>
+          </div>
+          <div style="color:var(--green); padding-left:24px;">↓ pthread_create (per keypress)</div>
+          <div class="flow-box" style="width:100%; border-color:rgba(0,255,65,0.4);">
+            <div class="fb-title" style="color:var(--green);">MOVEMENT THREAD — __player_effect__</div>
+            <div class="fb-sub">Detached · animates jump arc frame by frame</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Mutex protection</h3>
+        <ul class="item-list" style="font-size:13px;">
+          <li><code>game→lock</code> guards global game state (ACTIVE / IDLE / INACTIVE)</li>
+          <li><code>player→lock</code> guards per-player x, y, state</li>
+          <li>All reads/writes to shared state go through <code>pthread_mutex_lock</code></li>
+          <li>Movement thread detaches itself — no join needed on cleanup</li>
+          <li>Input thread joined in <code>end()</code> before teardown</li>
+        </ul>
+        <div style="margin-top:20px;" class="term">
+          <div class="term-bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span class="term-title">state machine</span></div>
+          <div class="term-body" style="font-size:12px;">
+<span class="cm">// Game state transitions</span><br>
+INACTIVE <span class="kw">→</span> ACTIVE  <span class="cm">// on start</span><br>
+ACTIVE   <span class="kw">→</span> IDLE    <span class="cm">// on pause</span><br>
+IDLE     <span class="kw">→</span> ACTIVE  <span class="cm">// on resume</span><br>
+ACTIVE   <span class="kw">→</span> INACTIVE <span class="cm">// collision</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 6 — ASM DEEP DIVE
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div style="width:100%;max-width:1000px;">
+    <div class="tag animate-in">Assembly Deep Dive</div>
+    <h2 class="animate-in">The ASM Side — game.asm</h2>
+    <div class="slide-split animate-in">
+      <div>
+        <div class="term">
+          <div class="term-bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span class="term-title">game.asm — key functions</span></div>
+          <div class="term-body" style="font-size:12px; line-height:2;">
+<span class="cm">; Entry point called from driver.c</span><br>
+<span class="kw">global</span> <span class="fn">asm_main</span><br><br>
+<span class="cm">; Exported to C (declared in game.h)</span><br>
+<span class="kw">global</span> <span class="fn">move_player</span><br>
+<span class="kw">global</span> <span class="fn">check_for_collision</span><br><br>
+<span class="cm">; move_player args (cdecl 32-bit):</span><br>
+<span class="cm">;   int* new_yx, char key,</span><br>
+<span class="cm">;   int y, int x, int rows, int cols</span><br><br>
+<span class="cm">; Uses enter/leave stack frames</span><br>
+<span class="cm">; 32-bit cdecl calling convention</span><br>
+<span class="cm">; EAX = return value</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Assembly responsibilities</h3>
+        <ul class="item-list" style="font-size:13px;">
+          <li><strong>move_player</strong> — takes key input, calculates target Y/X position, writes into int* array</li>
+          <li><strong>check_for_collision</strong> — reads the map char array at player's (y,x), returns 1 if obstacle</li>
+          <li>All gameplay math in registers — EAX, EBX, ECX, EDX</li>
+          <li>Stack frames via <code>enter N, 0</code> / <code>leave</code> — compatible with C's cdecl</li>
+          <li>Arguments pushed right-to-left by C, popped off in ASM via <code>[ebp+8]</code>, <code>[ebp+12]</code>…</li>
+        </ul>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+          <span class="pill pill-green">cdecl calling convention</span>
+          <span class="pill pill-cyan">32-bit EBP frames</span>
+          <span class="pill pill-yellow">EAX return values</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 7 — BUILD SYSTEM
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div style="width:100%;max-width:900px;">
+    <div class="tag animate-in">Build Pipeline</div>
+    <h2 class="animate-in">Compilation Chain</h2>
+    <div style="width:100%;" class="animate-in">
+      <div class="flow" style="justify-content:flex-start; flex-wrap:wrap; gap:6px; margin-bottom:28px;">
+        <div class="flow-box"><div class="fb-title">asm_io.asm</div><div class="fb-sub">NASM -f elf32</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-title">asm_io.o</div><div class="fb-sub">32-bit obj</div></div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-box"><div class="fb-title">driver.c</div><div class="fb-sub">gcc -m32</div></div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-box"><div class="fb-title">game.asm</div><div class="fb-sub">NASM -f elf</div></div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-box"><div class="fb-title">game.c</div><div class="fb-sub">gcc -m32</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="border-color:rgba(0,255,65,0.5);">
+          <div class="fb-title" style="color:var(--green);">game.out</div>
+          <div class="fb-sub">32-bit ELF</div>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><span class="term-title">Makefile commands</span></div>
+        <div class="term-body" style="font-size:12px; line-height:2.2;">
+<span class="cm"># Step 1 — assemble I/O support layer</span><br>
+nasm <span class="kw">-f elf32</span> <span class="str">-d ELF_TYPE</span> <span class="kw">-g -F dwarf</span> src/asm_io.asm <span class="kw">-I</span> inc <span class="kw">-o</span> asm_io.o<br><br>
+<span class="cm"># Step 2 — compile C driver</span><br>
+gcc <span class="kw">-no-pie -g -m32 -znoexecstack</span> <span class="kw">-c</span> src/driver.c <span class="kw">-I</span> inc<br><br>
+<span class="cm"># Step 3 — assemble game logic</span><br>
+nasm <span class="kw">-f elf -F dwarf -g</span> src/game.asm <span class="kw">-I</span> inc <span class="kw">-o</span> game.o<br><br>
+<span class="cm"># Step 4 — link everything</span><br>
+gcc <span class="kw">-no-pie -g -m32 -znoexecstack</span> asm_io.o driver.o game.o src/game.c <span class="kw">-I</span> inc <span class="kw">-lncursesw -lpthread -o</span> game.out
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 8 — CHALLENGES
+══════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div style="width:100%;max-width:1000px;">
+    <div class="tag animate-in">Lessons Learned</div>
+    <h2 class="animate-in">Challenges We Hit</h2>
+    <div class="slide-split animate-in">
+      <div>
+        <h3 style="margin-bottom:16px;">Technical</h3>
+        <ul class="item-list" style="font-size:13px;">
+          <li>UTF-8 obstacle chars (<code>▓▲◆</code>) overflow <code>char[3]</code> — each is 3 bytes. Fixed with ASCII fallback</li>
+          <li>Race conditions between input thread and game loop — solved with per-player mutex</li>
+          <li>ncurses crashing on game over when a window was left blank — all 3 panels must be drawn before refresh</li>
+          <li>32-bit cdecl stack alignment — arguments pushed in reverse, accessed via <code>[ebp+N]</code></li>
+          <li>Player Y spawn offset — being off by 1 broke the jump arc calculation in ASM</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:16px;">Process</h3>
+        <ul class="item-list" style="font-size:13px;">
+          <li>C↔ASM interface — agreeing on who owns what state and how to pass pointers cleanly</li>
+          <li>Detached threads — movement threads needed <code>pthread_detach</code> to avoid memory leaks on rapid keypresses</li>
+          <li><code>__initialize_curses__</code> accidentally duplicated inside <code>init()</code> — corrupted the whole function body</li>
+          <li>Debugging ncurses with GDB requires <code>-g -F dwarf</code> in both NASM and GCC flags</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 9 — DEMO / END
+══════════════════════════════════════════════════ -->
+<div class="slide slide-title" id="s8">
+  <div class="tag animate-in">Thank You</div>
+  <h1 class="glitch animate-in">DEMO<br><span style="font-size:0.5em; color:var(--cyan);">TIME</span></h1>
+  <div style="margin-top:32px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; max-width:700px;" class="animate-in">
+    <div class="stat"><div class="stat-val" style="color:var(--cyan);">C</div><div class="stat-label">Init & Render</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--red);">ASM</div><div class="stat-label">Logic & Move</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--yellow);">∞</div><div class="stat-label">Endless Run</div></div>
+  </div>
+  <div style="margin-top:40px; color:var(--muted); font-size:12px; letter-spacing:2px;" class="animate-in">
+    github.com/K3rn4lp4n1c/Danger-Dash
+  </div>
+  <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;" class="animate-in">
+    <span class="pill pill-green">Benjamin — Engine</span>
+    <span class="pill pill-red">Muhammad — Input</span>
+    <span class="pill pill-cyan">Ethan — Init</span>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- Navigation -->
+<nav>
+  <button class="nav-btn" id="prevBtn">◀ PREV</button>
+  <span class="slide-counter" id="counter">1 / 9</span>
+  <button class="nav-btn" id="nextBtn">NEXT ▶</button>
+</nav>
+
+<div class="dot-nav" id="dotNav"></div>
+
+<script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = (e.clientX - 6) + 'px';
+    cursor.style.top  = (e.clientY - 6) + 'px';
+  });
+
+  // Slides
+  const slides = document.querySelectorAll('.slide');
+  const counter = document.getElementById('counter');
+  const dotNav  = document.getElementById('dotNav');
+  let cur = 0;
+
+  // Build dot nav
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dn' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotNav.appendChild(d);
+  });
+
+  function goTo(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('exit');
+    setTimeout(() => slides[cur].classList.remove('exit'), 350);
+    cur = n;
+    slides[cur].classList.add('active');
+    counter.textContent = (cur + 1) + ' / ' + slides.length;
+    document.querySelectorAll('.dn').forEach((d, i) => d.classList.toggle('active', i === cur));
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', () => goTo(cur + 1));
+  document.getElementById('prevBtn').addEventListener('click', () => goTo(cur - 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') goTo(cur + 1);
+    if (e.key === 'ArrowLeft') goTo(cur - 1);
+  });
+</script>
+</body>
+</html>
