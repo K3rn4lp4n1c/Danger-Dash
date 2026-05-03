@@ -1,26 +1,28 @@
 # Danger Dash
 
-Danger Dash is a 32-bit Linux terminal runner built as a hybrid **C + NASM x86 assembly** project for class. The game combines:
+Danger Dash is a 32-bit Linux terminal runner built as a hybrid C and NASM x86 assembly class project.
 
-- **C** for runtime systems, ncurses rendering, threading, audio, scoring, and environment tests
-- **Assembly** for entrypoint control flow, command parsing, movement rules, and collision access into shared game state
+The project combines:
 
-The project is designed to explore low-level systems programming, terminal game development, and C/Assembly interoperability in one codebase.
+- **C** for runtime systems, ncurses rendering, threading, audio, scoring, persistence, and environment testing
+- **Assembly** for entrypoint flow, command parsing, movement rules, and collision reads into shared game state
+
+The goal of the project is to explore low-level systems programming, terminal game development, and C/Assembly interoperability in one codebase.
 
 ---
 
 ## Features
 
 - 32-bit Linux target using **GCC** and **NASM**
-- Terminal-based UI using **ncursesw**
+- Terminal UI using **ncursesw**
 - Hybrid C and Assembly architecture
-- Character-based runner gameplay
-- Moving obstacle map
+- Side-scrolling runner gameplay
 - HUD with score and player state display
+- Character-based player selection
 - Audio support through **miniaudio**
 - Local score persistence
 - Built-in runtime self-test mode
-- GitHub Actions CI for dependency, binary, and runtime validation
+- GitHub Actions CI for dependency and runtime validation
 
 ---
 
@@ -39,36 +41,40 @@ The project is designed to explore low-level systems programming, terminal game 
 ## Architecture Overview
 
 ### C responsibilities
-The C runtime handles:
+
+The C runtime currently handles:
 
 - ncurses initialization
 - window creation and rendering
 - game HUD drawing
-- obstacle map rendering
-- audio setup and playback
+- scrolling map updates
+- audio initialization and playback
 - thread creation and synchronization
-- score tracking and persistence
+- score tracking and ranking persistence
 - runtime environment testing
 - overall game lifecycle coordination
 
 ### Assembly responsibilities
-The assembly runtime handles:
+
+The assembly runtime currently handles:
 
 - `asm_main` entrypoint logic
 - command-line dispatch
+- help/version/test/players mode selection
 - player argument parsing
 - movement rule calculation
-- collision reads into game memory
+- collision reads into shared game memory
 - bridging calls into C runtime functions
 
 ### Interop model
-`src/driver.c` provides a standard C `main()` that forwards control to:
+
+`src/driver.c` provides a C `main()` that forwards control to:
 
 ```c
 int asm_main(int argc, char* argv[]);
 ````
 
-From there, Assembly decides which mode to run and calls into C through wrappers exposed in `src/asm_io.asm`.
+From there, Assembly decides which mode to run and calls into C through wrapper functions exposed in `src/asm_io.asm`.
 
 ---
 
@@ -76,21 +82,21 @@ From there, Assembly decides which mode to run and calls into C through wrappers
 
 ### Default run
 
-Starts the game with a default player profile.
+Starts the game with a default single player profile.
 
-```bash id="2i3gp2"
+```bash
 ./game.out
 ```
 
 ### Help
 
-```bash id="6g1ji3"
+```bash
 ./game.out help
 ```
 
 ### Version
 
-```bash id="diy0gn"
+```bash
 ./game.out version
 ```
 
@@ -98,7 +104,7 @@ Starts the game with a default player profile.
 
 Runs the internal self-test used by CI and manual environment checking.
 
-```bash id="ppv2bz"
+```bash
 ./game.out test
 ```
 
@@ -106,7 +112,7 @@ Runs the internal self-test used by CI and manual environment checking.
 
 Starts a game with explicit player definitions.
 
-```bash id="4d4p8h"
+```bash
 ./game.out players 2 "Alice:B" "Bob:E"
 ```
 
@@ -121,15 +127,15 @@ Supported character tags:
 
 ## Gameplay Summary
 
-Danger Dash is a side-scrolling terminal runner. The game world moves horizontally while the player dodges incoming obstacles and survives as long as possible to increase score.
+Danger Dash is a side-scrolling terminal runner. The world scrolls horizontally while the player avoids obstacles and survives as long as possible to increase score.
 
-The C runtime controls rendering and timing. The Assembly routines currently participate in movement and collision-related decision flow.
-
-The display is divided into three ncurses windows:
+The display is split into three ncurses windows:
 
 * **Status window** for score, state, and frame information
 * **Game window** for the scrolling playfield
 * **Info window** for players, controls, and rankings
+
+The C runtime controls drawing, timing, and presentation. The Assembly routines currently participate in movement and collision-related logic.
 
 ---
 
@@ -143,8 +149,8 @@ The display is divided into three ncurses windows:
 ### In game
 
 * `Arrow keys` to move
-* `Space` maps to jump/upward movement
-* `Backspace` to pause/resume
+* `Space` maps to jump or upward movement
+* `Backspace` to pause or resume
 * `ESC` to end the run
 
 ### Experimental multiplayer input routing
@@ -154,9 +160,9 @@ The current code contains in-progress multi-input routing:
 * Player 1: Arrow keys
 * Player 3: `I` through `P`
 * Player 4: numeric keys
-* Player 2: fallback route for remaining non-arrow input
+* Player 2: fallback route for other non-arrow input
 
-This logic exists in the implementation, but the multiplayer input design is still experimental.
+This logic exists in the implementation, but multiplayer controls should still be considered experimental.
 
 ---
 
@@ -164,7 +170,7 @@ This logic exists in the implementation, but the multiplayer input design is sti
 
 This project targets **32-bit Linux** and requires multilib support.
 
-### Packages used by `make install`
+### Packages installed by `make install`
 
 * nasm
 * gcc
@@ -182,37 +188,37 @@ This project targets **32-bit Linux** and requires multilib support.
 
 ### Install dependencies
 
-```bash id="v2l3vt"
+```bash
 make install
 ```
 
 ### Build development binary
 
-```bash id="7qbug4"
+```bash
 make
 ```
 
 Output:
 
-```text id="9n3t3l"
+```text
 game.out
 ```
 
 ### Build production-named binary
 
-```bash id="b90mzx"
+```bash
 make PROD=true
 ```
 
 Output:
 
-```text id="mis494"
+```text
 danger-dash
 ```
 
 ### Clean build artifacts
 
-```bash id="rtm8vl"
+```bash
 make clean
 ```
 
@@ -222,7 +228,7 @@ make clean
 
 ### Makefile test target
 
-```bash id="o7mn5l"
+```bash
 make test
 ```
 
@@ -233,34 +239,35 @@ The current `test` target validates:
 * the binary is a **32-bit ELF**
 * the binary is **dynamically linked**
 * shared runtime libraries resolve through `ldd`
-* the program’s internal runtime test passes
+* the program's internal runtime test passes
 
 ### Manual runtime test
 
-```bash id="ho85ry"
+```bash
 ./game.out test
 ```
 
 This test is intended to verify that the environment has what the game needs to run, such as terminal assumptions, library availability, and required runtime assets.
 
+If the game fails to start correctly in a given environment, run the runtime test first.
+
 ---
 
 ## CI Overview
 
-The GitHub Actions workflow currently:
+The GitHub Actions workflow currently does the following:
 
 1. Checks out the repository
-2. Installs required build packages
+2. Installs required build packages with `make install`
 3. Runs `make test`
-4. Builds the project
 
-This gives the project an automated verification path for binary format, runtime dependency resolution, and the internal self-test.
+This gives the project an automated verification path for dependency setup, binary format validation, runtime library resolution, and the internal self-test.
 
 ---
 
 ## Project Structure
 
-```text id="v7u9ke"
+```text
 Danger-Dash/
 ├── .github/
 │   └── workflows/
@@ -292,7 +299,7 @@ Builds either the development binary or the production-named binary, installs th
 
 ### `.github/workflows/testgame.yml`
 
-GitHub Actions workflow that installs dependencies, runs `make test`, and builds the game.
+GitHub Actions workflow that installs dependencies and runs `make test`.
 
 ### `src/driver.c`
 
@@ -305,7 +312,7 @@ Primary assembly game control file. Handles:
 * command-line parsing
 * mode dispatch
 * default launch behavior
-* test mode dispatch
+* help, version, test, and players modes
 * player parsing
 * movement rule logic
 * collision routine
@@ -354,12 +361,13 @@ MIT license for the project.
 
 ---
 
-## Runtime Files
+## Runtime Data
 
-The game uses local files during runtime:
+The game currently persists ranking data in:
 
-* `danger_dash.log` for log output
-* `danger_dash.bin` for ranking persistence
+* `danger_dash.bin`
+
+There is no separate runtime log file documented by the current code.
 
 ---
 
@@ -374,14 +382,14 @@ The current code expects these runtime assets.
 * `assets/muhammad.mp3`
 * `assets/test.wav`
 
-### Sound Effects
+### Sound effects
 
 * `assets/victory.mp3`
 * `assets/smokeweed.mp3`
 * `assets/kaboom.mp3`
 * `assets/allahuakbar.mp3`
 
-These files should be present relative to the executable’s working directory when the game is run.
+These files should be present relative to the executable's working directory when the game is run.
 
 ---
 
@@ -392,7 +400,7 @@ These files should be present relative to the executable’s working directory w
 Stores:
 
 * name
-* x / y position
+* x and y position
 * selected character
 * current state
 * mutex
@@ -436,7 +444,7 @@ Stores:
 
 The playfield scrolls by shifting the backing map buffer left each update. Obstacles are inserted at the right edge, and players are drawn on top using wide-character glyphs.
 
-The C runtime is currently responsible for:
+The C runtime is responsible for:
 
 * panel borders
 * score display
@@ -464,23 +472,22 @@ This repository is no longer just a planning skeleton. It currently contains:
 * a 32-bit Linux build path
 * CI testing
 * a runtime self-test path
-* working file layout for a hybrid C/Assembly game project
+* a working file layout for a hybrid C/Assembly game project
 
 ---
 
 ## Known Limitations
 
-The latest codebase is functional but still has a few important rough edges:
+The current codebase is functional, but still has a few rough edges:
 
 * **Linux-only and 32-bit only.** The project is tightly tied to a 32-bit Linux toolchain and runtime environment.
 * **Dynamic runtime dependencies are required.** The current build is dynamically linked, so the target system must have compatible runtime libraries available.
 * **The runtime test is environment-aware, not a full gameplay integration test.** It is meant to verify that the environment is suitable for running the game, not to prove every gameplay path is correct.
-* **The assembly CLI parser is still limited.** It currently treats player count as a single-character numeric argument and stores player data in fixed-size assembly buffers.
-* **Assembly/C layout coupling is brittle.** Collision code in Assembly depends on hard-coded struct offsets from the C side, so changing struct layouts can break the assembly logic.
+* **The assembly player parser still uses fixed-size buffers for four players.** That matches the project limit, but it keeps the parsing logic tightly coupled to that fixed maximum.
+* **Assembly/C layout coupling is brittle.** Collision logic in Assembly depends on hard-coded struct offsets from the C side, so changing struct layouts can break the assembly routine.
 * **Multiplayer controls are still experimental.** The routing logic exists, but the input scheme is not yet polished.
 * **Threading is not fully hardened yet.** The current runtime uses an input thread and detached player-effect threads, which makes cleanup and shutdown more delicate than a single-threaded design.
-* **Documentation and metadata still need some cleanup.** Version strings and a few developer-facing details may still need alignment across files.
-* **Obstacle logic is simple and still evolving.** The obstacle generation path works as a prototype and may not yet reflect the final gameplay design.
+* **Obstacle logic is still prototype-level.** The current obstacle generation works, but it is still simple and may not represent the final gameplay design.
 
 ---
 
@@ -494,3 +501,4 @@ The latest codebase is functional but still has a few important rough edges:
 ## License
 
 This project is licensed under the **MIT License**. See the [`LICENSE`](./LICENSE) file for details.
+```
