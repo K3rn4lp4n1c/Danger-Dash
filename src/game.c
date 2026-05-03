@@ -779,6 +779,14 @@ void deinit(Game *game) {
     exit(0);
 }
 
+void showConfig() {
+    printf("===== GAME.H =====\n\n");
+    printf("Max Players: %d\n", MAX_PLAYERS);
+    printf("Max Name Length: %d\n", MAX_NAME_LENGTH);
+    printf("Initial Frame Rate (microseconds): %d\n", INITIAL_FRAME_RATE);
+    printf("Obstacle Odds: %.2f%%\n", OBSTACLE_ODDS * 100);
+}
+
 // For testing purposes only
 void helloWorld(void) {
     int failures = 0;

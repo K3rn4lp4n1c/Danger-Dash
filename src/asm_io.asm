@@ -45,6 +45,7 @@
   %define _deinit       deinit
   %define _curses_getch getch
   %define _helloWorld   helloWorld
+  %define _showConfig   showConfig
 %endif
 
 ;
@@ -63,6 +64,7 @@
   %define _deinit       deinit_
   %define _curses_getch getch_
   %define _helloWorld   helloWorld_
+  %define _showConfig   showConfig_
 %endif
 
 %ifdef OBJ_TYPE
@@ -113,13 +115,13 @@ segment .text
         ; exposes the read_int, print_int, etc. functions to game.asm
         ; [NOOBS] add more NASM symbols to call from C here
         global  hello_world
-        global  init_game, update_game, run_game, end_game, deinit_game, curses_getch
+        global  init_game, update_game, run_game, end_game, deinit_game, curses_getch, show_config
 
         extern  _scanf, _printf, _getchar, _putchar
         ; from the %ifdef ELF_TYPE, this is just scanf, printf, etc. without underscores
         ; [NOOBS] add more C symbols to call from nasm here
         extern  _helloWorld
-        extern  _init, _update, _run, _displace, _end, _deinit, _curses_getch
+        extern  _init, _update, _run, _displace, _end, _deinit, _curses_getch, _showConfig
 
 ; function_name_in_assembly_that returns Game*:
 ;       push    ebp
@@ -217,6 +219,16 @@ hello_world:
         mov     ebp, esp
 
         call    _helloWorld
+
+        mov     esp, ebp
+        pop     ebp
+        ret
+
+show_config:
+        push    ebp
+        mov     ebp, esp
+
+        call    _showConfig
 
         mov     esp, ebp
         pop     ebp

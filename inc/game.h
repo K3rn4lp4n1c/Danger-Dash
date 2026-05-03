@@ -18,11 +18,15 @@
 
 extern const char GAME_TITLE[];
 extern const char GAME_VERSION[];
+extern const char *OBSTACLES[4];
+extern const char *MUSIC[4];
+extern const char *SOUND_EFFECTS[4];
+extern const char RANKING_FILE[];
+
 #define MAX_PLAYERS 4
 #define MAX_PREDECESSORS 5
 #define MAX_NAME_LENGTH 20
 #define INITIAL_FRAME_RATE 50000 // ~20 FPS
-#define RANKING_FILE "danger_dash.bin"
 
 #ifndef NASM_FUNCTIONS
 #define NASM_FUNCTIONS
@@ -32,25 +36,6 @@ void move_player(int *, int, int, int, int, int);
 
 typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
 typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
-
-const wchar_t OBSTACLES[][4] = {
-    L"▲◆✦",   // Benjamin
-    L"■●◆",   // Ethan
-    L"⚠▲■",   // Muhammad
-    L"◆✦●"    // Youssef
-};
-const char *MUSIC[] = {
-    "assets/benjamin.mp3",
-    "assets/ethan.mp3",
-    "assets/muhammad.mp3",
-    "assets/test.wav",
-};
-const char *SOUND_EFFECTS[] = {
-    "assets/victory.mp3",
-    "assets/smokeweed.mp3",
-    "assets/kaboom.mp3",
-    "assets/allahuakbar.mp3",
-};
 
 const double OBSTACLE_ODDS = 0.01; // 1% chance of new obstacle each frame
 
@@ -103,12 +88,15 @@ typedef struct {
 } Game;
 
 Game* init(int, char **, Characters *);
-void helloWorld(), update(Game *), run(Game *), end(Game *), deinit(Game *);
+
+void helloWorld(), showConfig();
+void update(Game *), run(Game *), end(Game *), deinit(Game *);
 
 void __refresh_all_windows__(Game *), __initialize_curses__();
 void __initial_screen__(Game *, int, int), __adjust_map__(Game *, int, int);
 void __erase_all_windows__(Environment *);
 void* __keypress__(void *), *__player_effect__(void *);
+
 const wchar_t* __resolve_character__(Characters*);
 
 int __audio_init__(Audio *audio, const char *music_path);

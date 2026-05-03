@@ -1,17 +1,58 @@
 %include "asm_io.inc"
 
 segment .data
-        game_args     dq "help", "version", "players", "test"
+        char1_music db "assets/benjamin.mp3", 0
+        char2_music db "assets/ethan.mp3", 0
+        char3_music db "assets/muhammad.mp3", 0
+        char4_music db "assets/youssef.mp3", 0
+        char1_sfx   db "assets/victory.mp3", 0
+        char2_sfx   db "assets/smokeweed.mp3", 0
+        char3_sfx   db "assets/kaboom.mp3", 0
+        char4_sfx   db "assets/allahuakbar.mp3", 0
+        char1_obstacles db "-<#", 0
+        char2_obstacles db "@*|", 0
+        char3_obstacles db "+@&", 0
+        char4_obstacles db "*^?", 0
+
+        game_args     dq "help", "version", "players", "test", "config", 0
+        default_name  db "John Doe", 0
+
         help_message  db "Usage: danger-dash [options]", 10, "Options:", 10,
         db "  help      Show this help message", 10,
         db "  version   Show game version", 10,
         db "  players   Start with specified players (danger-dash players 2 Alice:B Bob:E)", 10,
         db "  test      Run a simple test function", 10, 0
-        GAME_TITLE    db "Danger Dash", 10, 0
-        GAME_VERSION  db "0.9.9-beta", 10, 0
         play_err_msg  db "Error: Invalid player arguments.", 10,
         db "Usage: danger-dash players <count> <name:char> ...", 10, 0
-        default_name  db "John Doe", 0
+        config_msg    db "Game configurations live in both game.asm and game.h.",
+        db " Edit either files with caution!", 10, 10,
+        db "===== GAME.ASM =====", 10, 0
+        
+        GAME_TITLE    db "Danger Dash", 0
+        GAME_VERSION  db "0.9.9-beta", 0
+        config_msg_a1 db "Title: " , 0
+        config_msg_a2 db "Version: ", 0
+
+        RANKING_FILE  db "danger_dash.bin", 0
+        config_msg_a3 db "Ranking File Path: ./", 0
+
+        OBSTACLES     dd char1_obstacles, char2_obstacles, char3_obstacles, char4_obstacles
+        cfg_msg_a4_p1 db "Benjamin's Obstacles: ", 0
+        cfg_msg_a4_p2 db "Ethan's Obstacles: ", 0
+        cfg_msg_a4_p3 db "Muhammad's Obstacles: ", 0
+        cfg_msg_a4_p4 db "Youssef's Obstacles: ", 0
+
+        MUSIC         dd char1_music, char2_music, char3_music, char4_music
+        cfg_msg_a5_p1 db "Benjamin's Music: ", 0
+        cfg_msg_a5_p2 db "Ethan's Music: ", 0
+        cfg_msg_a5_p3 db "Muhammad's Music: ", 0
+        cfg_msg_a5_p4 db "Youssef's Music: ", 0
+
+        SOUND_EFFECTS dd char1_sfx, char2_sfx, char3_sfx, char4_sfx
+        cfg_msg_a6_p1 db "Benjamin's Sound Effects: ", 0
+        cfg_msg_a6_p2 db "Ethan's Sound Effects: ", 0
+        cfg_msg_a6_p3 db "Muhammad's Sound Effects: ", 0
+        cfg_msg_a6_p4 db "Youssef's Sound Effects: ", 0
 
 segment .bss
         argc       resd 1
@@ -25,6 +66,10 @@ segment .text
         global  move_player
         global  GAME_TITLE
         global  GAME_VERSION
+        global  RANKING_FILE
+        global  OBSTACLES
+        global  MUSIC
+        global  SOUND_EFFECTS
 
 asm_main:
         push    ebp
@@ -73,6 +118,12 @@ asm_main:
         call    .compare_string_helper
         je      .test
 
+        mov     esi, eax
+        mov     edi, game_args + 32 ; 'config'
+        mov     ecx, 6 ; length of "config"
+        call    .compare_string_helper
+        je      .print_config
+
 .print_help:
         mov     eax, help_message
         call    print_string
@@ -119,6 +170,96 @@ asm_main:
 
 .test:
         call    hello_world
+        jmp     asm_end
+
+.print_config:
+        mov     eax, config_msg
+        call    print_string
+        call    print_nl
+        mov     eax, config_msg_a1
+        call    print_string
+        mov     eax, GAME_TITLE
+        call    print_string
+        call    print_nl
+        mov     eax, config_msg_a2
+        call    print_string
+        mov     eax, GAME_VERSION
+        call    print_string
+        call    print_nl
+        mov     eax, config_msg_a3
+        call    print_string
+        mov     eax, RANKING_FILE
+        call    print_string
+        call    print_nl
+
+        call    print_nl
+        mov     eax, cfg_msg_a4_p1
+        call    print_string
+        mov     eax, char1_obstacles
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a4_p2
+        call    print_string
+        mov     eax, char2_obstacles
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a4_p3
+        call    print_string
+        mov     eax, char3_obstacles
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a4_p4
+        call    print_string
+        mov     eax, char4_obstacles
+        call    print_string
+        call    print_nl
+
+        call    print_nl
+        mov     eax, cfg_msg_a5_p1
+        call    print_string
+        mov     eax, char1_music
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a5_p2
+        call    print_string
+        mov     eax, char2_music
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a5_p3
+        call    print_string
+        mov     eax, char3_music
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a5_p4
+        call    print_string
+        mov     eax, char4_music
+        call    print_string
+        call    print_nl
+
+        call    print_nl
+        mov     eax, cfg_msg_a6_p1
+        call    print_string
+        mov     eax, char1_sfx
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a6_p2
+        call    print_string
+        mov     eax, char2_sfx
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a6_p3
+        call    print_string
+        mov     eax, char3_sfx
+        call    print_string
+        call    print_nl
+        mov     eax, cfg_msg_a6_p4
+        call    print_string
+        mov     eax, char4_sfx
+        call    print_string
+        call    print_nl
+
+        call    print_nl
+        call    show_config
         jmp     asm_end
 
 .get_players:
