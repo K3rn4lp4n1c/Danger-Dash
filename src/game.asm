@@ -25,7 +25,7 @@ segment .data
         play_err_msg  db "Error: Invalid player arguments.", 10,
         db "Usage: danger-dash players <count> <name:char> ...", 10, 0
         config_msg    db "Game configurations live in both game.asm and game.h.",
-        db " Edit either files with caution!", 10, 10,
+        db " Edit either files and compile with caution!", 10, 10,
         db "===== GAME.ASM =====", 10, 0
         
         GAME_TITLE    db "Danger Dash", 0
