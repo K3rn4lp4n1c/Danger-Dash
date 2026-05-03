@@ -21,7 +21,8 @@ segment .data
         db "  help      Show this help message", 10,
         db "  version   Show game version", 10,
         db "  players   Start with specified players (danger-dash players 2 Alice:B Bob:E)", 10,
-        db "  test      Run a simple test function", 10, 0
+        db "  test      Run a simple test function", 10,
+        db "  config    Show current game configurations", 10, 0
         play_err_msg  db "Error: Invalid player arguments.", 10,
         db "Usage: danger-dash players <count> <name:char> ...", 10, 0
         config_msg    db "Game configurations live in both game.asm and game.h.",
