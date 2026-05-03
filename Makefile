@@ -33,7 +33,15 @@ clean:
 >rm -rf $(PROJECT_NAME) $(PROJECT_FILE_PREFIX).out $(TARGET) $(OBJS)
 
 test: $(TARGET)
->./$(TARGET) test
+>test -f ./$(TARGET) || { echo "error: $(TARGET) was not built"; exit 1; }
+>test -x ./$(TARGET) || { echo "error: $(TARGET) is not executable"; exit 1; }
+>binary_info="$$(file ./$(TARGET))"; \
+>echo "$$binary_info"; \
+>echo "$$binary_info" | grep -q 'ELF 32-bit' || { echo "error: $(TARGET) is not a 32-bit ELF binary"; exit 1; }; \
+>echo "$$binary_info" | grep -q 'dynamically linked' || { echo "error: $(TARGET) is not dynamically linked"; exit 1; }
+>ldd ./$(TARGET) | tee /tmp/$(TARGET).ldd
+>! grep -q 'not found' /tmp/$(TARGET).ldd || { echo "error: one or more runtime libraries are missing"; exit 1; }
+>TERM=xterm ./$(TARGET) test
 
 $(PROJECT_FILE_PREFIX).out: $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
 >gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $@
