@@ -83,10 +83,22 @@ asm_main:
 .compare_string_helper:
         push    ebp
         mov     ebp, esp
+        push    esi
+        push    edi
 
         cld
         repe    cmpsb
+        sete    al
+        cmp     byte [edi], 0 ; ensure the argument string is NUL-terminated
+        sete    bl
+        cmp     byte [esi], 0 ; ensure the game_args string is also NUL
+        sete    dl
+        and     al, bl ; al = 1 if both match and game_args is fully matched, else 0
+        and     al, dl
+        cmp     al, 1
 
+        pop     edi
+        pop     esi
         pop     ebp
         ret
 
@@ -106,8 +118,6 @@ asm_main:
         mov     eax, [eax] ; get player count argument
         mov     edx, eax
         call    atoi
-        call    print_int
-        call    print_nl
         cmp     eax, 0
         jle     .get_players_err ; player count must be > 0
         mov     [count], eax ; store player count
@@ -125,7 +135,7 @@ asm_main:
         jmp     asm_end
 
 .get_players_loop:
-        cmp     edi, ecx
+        cmp     edi, dword [count]
         jge     game_main
         mov     eax, [esi]         ; eax = argv string pointer
         mov     edx, eax          ; edx = scan pointer

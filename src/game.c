@@ -551,13 +551,6 @@ void* __player_effect__(void *arg) {
         return NULL;
     }
     move_player(new_yx, key, start_y, start_x, lines, cols);
-    if (new_yx == NULL) {
-        pthread_mutex_lock(&player->lock);
-        if (player->state == BUSY) player->state = ACTIVE;
-        pthread_mutex_unlock(&player->lock);
-        return NULL;
-    }
-
     int target_y = new_yx[0];
     int target_x = new_yx[1];
     free(new_yx);

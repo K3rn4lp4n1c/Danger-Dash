@@ -84,6 +84,7 @@ typedef struct {
     unsigned long frame_rate;
 } Environment;
 
+/* n00b5_d0_n0t_t0uch! Delicate memory layout of struct used in `game.asm` */
 typedef struct {
     int player_count;
     int score;

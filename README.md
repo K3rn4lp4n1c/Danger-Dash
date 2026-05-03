@@ -1,4 +1,3 @@
-````markdown id="g6qthv"
 # Danger Dash
 
 Danger Dash is a 32-bit Linux terminal runner built as a hybrid **C + NASM x86 assembly** project for class. The game combines:
