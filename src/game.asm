@@ -119,7 +119,12 @@ asm_main:
         mov     edx, eax
         call    atoi
         cmp     eax, 0
-        jle     .get_players_err ; player count must be > 0
+        setle   bl ; set bl to 1 if eax <= 0, else 0
+        cmp     eax, 4 ; MAX_PLAYERS = 4
+        setg    cl ; set cl to 1 if eax > 4, else 0
+        or      bl, cl ; bl = 1 if player count is invalid (<=0 or >4)
+        cmp     bl, 1
+        je     .get_players_err ; player count must be > 0
         mov     [count], eax ; store player count
 
         mov     esi, [argv]
