@@ -1,7 +1,6 @@
 .RECIPEPREFIX := >
 PROJECT_NAME := danger-dash
 PROJECT_FILE_PREFIX := game
-PROD ?= false
 
 INC_DIR := inc
 SRC_DIR := src
@@ -9,6 +8,7 @@ SRC_DIR := src
 CFLAGS := -no-pie -g -m32 -znoexecstack
 NASM_FLAGS := -f elf -F dwarf -g
 NASM_FLAGS_32 := -f elf32 -d ELF_TYPE -g -F dwarf
+PROD ?= false
 
 OBJS := asm_io.o driver.o $(PROJECT_FILE_PREFIX).o
 PKGS := nasm gcc make gcc-multilib libc6-dev-i386 lib32gcc-s1 lib32ncurses-dev libasound2t64:i386 libpulse0:i386
@@ -35,7 +35,10 @@ clean:
 test: $(TARGET)
 >./$(TARGET) test
 
-$(TARGET): $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
+$(PROJECT_FILE_PREFIX).out: $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
+>gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $@
+
+$(PROJECT_NAME): $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
 >gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $@
 
 $(PROJECT_FILE_PREFIX).o: $(SRC_DIR)/$(PROJECT_FILE_PREFIX).asm $(INC_DIR)/asm_io.inc
