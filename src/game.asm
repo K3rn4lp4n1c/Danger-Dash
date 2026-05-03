@@ -2,9 +2,13 @@
 
 segment .data
         game_args     dq "help", "version", "players", "test"
-        help_message  db "Usage: danger-dash [options]", 10, 0
-        GAME_TITLE   db "Danger Dash", 0
-        GAME_VERSION db "0.9.9-beta", 0
+        help_message  db "Usage: danger-dash [options]", 10, "Options:", 10,
+        db "  help      Show this help message", 10,
+        db "  version   Show game version", 10,
+        db "  players   Start with specified players (danger-dash players 2 Alice:B Bob:E)", 10,
+        db "  test      Run a simple test function", 10, 0
+        GAME_TITLE    db "Danger Dash", 0
+        GAME_VERSION  db "0.9.9-beta", 0
         play_err_msg  db "Error: Invalid player arguments. Usage: danger-dash players <count> <name:char> ...", 10, 0
         default_name  db "John Doe", 0
 

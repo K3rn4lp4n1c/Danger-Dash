@@ -38,7 +38,6 @@
   %define _putchar    putchar
   ; _scanf, _printf, are just scanf, printf, etc. without underscores so we don't have conflicts 
   ; [NOOBS] add more defines here for C functions to call from nasm
-  ;%define _GAME_VERSION GAME_VERSION
   %define _init         init
   %define _update       update
   %define _run          run
@@ -57,7 +56,6 @@
   %define _getchar    getchar_
   %define _putchar    putchar_
   ; [NOOBS] add more defines here for C functions to call from nasm
-  ;%define _GAME_VERSION GAME_VERSION_
   %define _init         init_
   %define _update       update_
   %define _run          run_

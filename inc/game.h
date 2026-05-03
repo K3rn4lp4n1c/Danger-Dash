@@ -16,14 +16,12 @@
 #include <ncursesw/curses.h>
 #include "miniaudio.h"
 
-#define WELCOME_MSG "Hello World!"
 extern const char GAME_TITLE[];
 extern const char GAME_VERSION[];
 #define MAX_PLAYERS 4
 #define MAX_PREDECESSORS 5
 #define MAX_NAME_LENGTH 20
 #define INITIAL_FRAME_RATE 50000 // ~20 FPS
-#define LOG_FILE "danger_dash.log"
 #define RANKING_FILE "danger_dash.bin"
 
 #ifndef NASM_FUNCTIONS
