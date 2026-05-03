@@ -20396,7 +20396,7 @@ static void ma_device__handle_data_callback(ma_device* pDevice, void* pFramesOut
                 }
 
                 if (!pDevice->noClip && pDevice->playback.format == ma_format_f32) {
-                    ma_clip_samples_f32((float*)pFramesOut, (const float*)pFramesOut, frameCount * pDevice->playback.channels);   /* Intentionally specifying the same pointer for both input and output for in-place processing. */
+                    ma_clip_samples_f32((float*)pFramesOut, (const float*)pFramesOut, (ma_uint64)frameCount * pDevice->playback.channels);   /* Intentionally specifying the same pointer for both input and output for in-place processing. */
                 }
             }
         }
