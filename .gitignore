@@ -46,6 +46,9 @@
 # Binary data files
 *.bin
 
+# Compressed files
+*.zip
+
 # Screenshots
 *.png
 *.jpg

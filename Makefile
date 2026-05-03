@@ -46,7 +46,7 @@ test: $(TARGET)
 submission:
 >cp src/game.asm danger-dash.txt
 >echo "" > readme.txt
->zip -r submission.zip danger-dash.txt readme.txt Makefile src/ inc/ screenshots/ assets/
+>zip -r danger-dash.zip danger-dash.txt readme.txt Makefile src/ inc/ screenshots/ assets/
 >rm -f danger-dash.txt readme.txt
 
 $(PROJECT_FILE_PREFIX).out: $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
