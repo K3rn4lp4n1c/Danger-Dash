@@ -749,7 +749,6 @@ void end(Game *game) {
 
     move(LINES - 1, 0);
     clrtoeol();
-    mvprintw(LINES - 1, 0, "Exiting game... Press any key to restart, press q to quit.");
 
     __refresh_all_windows__(game);
     timeout(-1);

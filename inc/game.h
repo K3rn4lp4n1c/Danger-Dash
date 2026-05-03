@@ -33,7 +33,12 @@ void move_player(int *, int, int, int, int, int);
 typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
 typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
 
-const char OBSTACLES[][3] = {"#@&", "#@&", "#@&", "#@&"}; // 0 = mixed, 1 = air, 2 = land
+const wchar_t OBSTACLES[][4] = {
+    L"▲◆✦",   // Benjamin
+    L"■●◆",   // Ethan
+    L"⚠▲■",   // Muhammad
+    L"◆✦●"    // Youssef
+};
 const char *MUSIC[] = {
     "assets/benjamin.mp3",
     "assets/ethan.mp3",

@@ -7,9 +7,10 @@ segment .data
         db "  version   Show game version", 10,
         db "  players   Start with specified players (danger-dash players 2 Alice:B Bob:E)", 10,
         db "  test      Run a simple test function", 10, 0
-        GAME_TITLE    db "Danger Dash", 0
-        GAME_VERSION  db "0.9.9-beta", 0
-        play_err_msg  db "Error: Invalid player arguments. Usage: danger-dash players <count> <name:char> ...", 10, 0
+        GAME_TITLE    db "Danger Dash", 10, 0
+        GAME_VERSION  db "0.9.9-beta", 10, 0
+        play_err_msg  db "Error: Invalid player arguments.", 10,
+        db "Usage: danger-dash players <count> <name:char> ...", 10, 0
         default_name  db "John Doe", 0
 
 segment .bss
@@ -81,26 +82,30 @@ asm_main:
         jmp     game_main
 
 .compare_string_helper:
-        push    ebp
-        mov     ebp, esp
-        push    esi
-        push    edi
+    push    ebp
+    mov     ebp, esp
+    push    eax
+    push    ebx
+    push    esi
+    push    edi
 
-        cld
-        repe    cmpsb
-        sete    al
-        cmp     byte [edi], 0 ; ensure the argument string is NUL-terminated
-        sete    bl
-        cmp     byte [esi], 0 ; ensure the game_args string is also NUL
-        sete    dl
-        and     al, bl ; al = 1 if both match and game_args is fully matched, else 0
-        and     al, dl
-        cmp     al, 1
+    cld
+    repe    cmpsb
+    sete    al                 ; all compared bytes matched
+    cmp     byte [edi], 0      ; game_args ended here
+    sete    bl
+    and     al, bl
+    cmp     byte [esi], 0      ; argument also ended here
+    sete    bl
+    and     al, bl
+    cmp     al, 1              ; sets ZF for caller's JE
 
-        pop     edi
-        pop     esi
-        pop     ebp
-        ret
+    pop     edi
+    pop     esi
+    pop     ebx
+    pop     eax
+    pop     ebp
+    ret
 
 .print_version:
         mov     eax, GAME_VERSION
