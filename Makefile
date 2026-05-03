@@ -45,7 +45,7 @@ test: $(TARGET)
 
 submission:
 >cp src/game.asm danger-dash.txt
->echo "" > readme.txt
+>echo "I built a 32-bit Linux terminal runner game called Danger Dash using both C and x86 assembly. The program uses assembly for command parsing, movement logic, and collision handling, while C manages the game loop, terminal rendering with ncurses, audio playback, score tracking, and runtime testing. Players can launch the game in different modes, move through a scrolling obstacle course, and try to survive as long as possible for a higher score. This project demonstrates low-level programming, C and assembly interoperability, terminal UI design, and basic game systems development." > readme.txt
 >zip -r danger-dash.zip danger-dash.txt readme.txt Makefile src/ inc/ screenshots/ assets/
 >rm -f danger-dash.txt readme.txt
 
