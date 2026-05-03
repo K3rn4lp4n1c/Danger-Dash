@@ -805,47 +805,55 @@ void helloWorld(void) {
         printf("OK (%s)\n", term);
     }
 
+    int have_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+
     printf("\n[CHECK] ncurses initialization... ");
     if (failures == 0) {
-        WINDOW *screen = initscr();
-        if (screen == NULL) {
-            printf("FAIL\n");
-            fprintf(stderr, "initscr() failed.\n");
-            failures++;
+        if (!have_tty) {
+            printf("SKIPPED\n");
+            fprintf(stderr,
+                "No TTY available (CI environment). "
+                "Skipping ncurses init/shutdown checks.\n");
+            warnings++;
         } else {
-            curses_started = 1;
-
-            if (cbreak() == ERR) {
-                fprintf(stderr, "cbreak() failed.\n");
-                failures++;
-            }
-
-            if (noecho() == ERR) {
-                fprintf(stderr, "noecho() failed.\n");
-                failures++;
-            }
-
-            if (keypad(stdscr, TRUE) == ERR) {
-                fprintf(stderr, "keypad(stdscr, TRUE) failed.\n");
-                failures++;
-            }
-
-            if (has_colors()) {
-                if (start_color() == ERR) {
-                    fprintf(stderr, "start_color() failed.\n");
-                    failures++;
-                } else {
-                    use_default_colors();
-                }
-            } else {
-                warnings++;
-                fprintf(stderr, "Terminal reports no color support. Game may still run.\n");
-            }
-
-            if (failures == 0) {
-                printf("OK\n");
-            } else {
+            WINDOW *screen = initscr();
+            if (screen == NULL) {
                 printf("FAIL\n");
+                fprintf(stderr, "initscr() failed.\n");
+                failures++;
+            } else {
+                curses_started = 1;
+
+                if (cbreak() == ERR) {
+                    fprintf(stderr, "cbreak() failed.\n");
+                    failures++;
+                }
+
+                if (noecho() == ERR) {
+                    fprintf(stderr, "noecho() failed.\n");
+                    failures++;
+                }
+
+                if (keypad(stdscr, TRUE) == ERR) {
+                    fprintf(stderr, "keypad(stdscr, TRUE) failed.\n");
+                    failures++;
+                }
+
+                if (has_colors()) {
+                    if (start_color() == ERR) {
+                        fprintf(stderr, "start_color() failed.\n");
+                        failures++;
+                    } else {
+                    use_default_colors();
+                    }
+                } else {
+                    warnings++;
+                    fprintf(stderr,
+                        "Terminal reports no color support. "
+                        "Game may still run.\n");
+                }
+
+                printf(failures == 0 ? "OK\n" : "FAIL\n");
             }
         }
     } else {
