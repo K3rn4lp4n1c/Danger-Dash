@@ -788,6 +788,126 @@ void deinit(Game *game) {
 }
 
 // For testing purposes only
-void helloWorld() {
-    // check if ncurses
+void helloWorld(void) {
+    int failures = 0;
+    int warnings = 0;
+    int curses_started = 0;
+    const char *term = getenv("TERM");
+
+    printf("\n== Danger Dash Runtime Test ==\n");
+
+    printf("\n[CHECK] TERM environment... ");
+    if (term == NULL || term[0] == '\0') {
+        printf("FAIL\n");
+        fprintf(stderr, "TERM is not set. ncurses cannot initialize safely.\n");
+        failures++;
+    } else {
+        printf("OK (%s)\n", term);
+    }
+
+    printf("\n[CHECK] ncurses initialization... ");
+    if (failures == 0) {
+        WINDOW *screen = initscr();
+        if (screen == NULL) {
+            printf("FAIL\n");
+            fprintf(stderr, "initscr() failed.\n");
+            failures++;
+        } else {
+            curses_started = 1;
+
+            if (cbreak() == ERR) {
+                fprintf(stderr, "cbreak() failed.\n");
+                failures++;
+            }
+
+            if (noecho() == ERR) {
+                fprintf(stderr, "noecho() failed.\n");
+                failures++;
+            }
+
+            if (keypad(stdscr, TRUE) == ERR) {
+                fprintf(stderr, "keypad(stdscr, TRUE) failed.\n");
+                failures++;
+            }
+
+            if (has_colors()) {
+                if (start_color() == ERR) {
+                    fprintf(stderr, "start_color() failed.\n");
+                    failures++;
+                } else {
+                    use_default_colors();
+                }
+            } else {
+                warnings++;
+                fprintf(stderr, "Terminal reports no color support. Game may still run.\n");
+            }
+
+            if (failures == 0) {
+                printf("OK\n");
+            } else {
+                printf("FAIL\n");
+            }
+        }
+    } else {
+        printf("SKIPPED\n");
+    }
+
+    if (curses_started) {
+        printf("\n[CHECK] ncurses shutdown... ");
+        if (endwin() == ERR) {
+            printf("FAIL\n");
+            fprintf(stderr, "endwin() failed.\n");
+            failures++;
+        } else {
+            printf("OK\n");
+        }
+    }
+
+    printf("\n[CHECK] music assets...\n");
+    for (size_t i = 0; i < sizeof(MUSIC) / sizeof(MUSIC[0]); i++) {
+        printf("  - %s ... ", MUSIC[i]);
+        if (access(MUSIC[i], R_OK) == 0) {
+            printf("OK\n");
+        } else {
+            printf("FAIL\n");
+            fprintf(stderr, "Missing or unreadable music asset: %s\n", MUSIC[i]);
+            failures++;
+        }
+    }
+
+    printf("[CHECK] sound effect assets...\n");
+    for (size_t i = 0; i < sizeof(SOUND_EFFECTS) / sizeof(SOUND_EFFECTS[0]); i++) {
+        printf("  - %s ... ", SOUND_EFFECTS[i]);
+        if (access(SOUND_EFFECTS[i], R_OK) == 0) {
+            printf("OK\n");
+        } else {
+            printf("FAIL\n");
+            fprintf(stderr, "Missing or unreadable sound effect asset: %s\n", SOUND_EFFECTS[i]);
+            failures++;
+        }
+    }
+
+    printf("\n[CHECK] miniaudio decode path...\n");
+    ma_decoder decoder;
+    ma_result result = ma_decoder_init_file(MUSIC[0], NULL, &decoder);
+    if (result != MA_SUCCESS) {
+        fprintf(stderr, "ma_decoder_init_file('%s') failed: %s\n",
+                MUSIC[0], ma_result_description(result));
+        failures++;
+    } else {
+        printf("  - decoder init ... OK\n");
+        ma_decoder_uninit(&decoder);
+        printf("  - decoder shutdown ... OK\n");
+    }
+
+    printf("\n== Runtime Test Summary ==\n");
+    printf("Failures: %d\n", failures);
+    printf("Warnings: %d\n", warnings);
+
+    if (failures == 0) {
+        printf("TEST PASSED\n");
+        return;
+    }
+    fprintf(stderr, "TEST FAILED\n");
+    exit(EXIT_FAILURE);
 }

@@ -89,8 +89,7 @@ asm_main:
         jmp     asm_end
 
 .test:
-        mov     eax, help_message
-        call    print_string
+        call    hello_world
         jmp     asm_end
 
 .get_players:
