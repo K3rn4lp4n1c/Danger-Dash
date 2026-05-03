@@ -18,9 +18,7 @@ segment .bss
         argv       resd 1
         game       resd 1 ; pointer to the game struct
         count      resd 1
-        names      resd 4 ; pointer to array of player names
-        characters resd 4 ; pointer to array of player characters
-
+        
 segment .text
         global  asm_main
         global  check_for_collision
@@ -31,6 +29,11 @@ segment .text
 asm_main:
         push    ebp
         mov     ebp, esp
+        sub     esp, 40
+        lea     eax, [ebp - 40]
+        mov     [ebp - 4], eax
+        lea     eax, [ebp - 24]
+        mov     [ebp - 8], eax
         ; ********** CODE STARTS HERE **********
         ; get argc and argv from the stack and store them in argc and argv variables
         mov     eax, [ebp + 8]
@@ -77,8 +80,10 @@ asm_main:
 
 .default:
         mov     dword [count], 1
-        mov     dword [names], default_name
-        mov     dword [characters], 0
+        mov     ebx, [ebp - 4]
+        mov     dword [ebx], default_name
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx], 0
         jmp     game_main
 
 .compare_string_helper:
@@ -184,27 +189,33 @@ asm_main:
         jmp     .set_default
 
 .set_B:
-        mov     dword [characters + edi*4], 0
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx + edi*4], 0
         jmp     .store_name
 .set_E:
-        mov     dword [characters + edi*4], 1
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx + edi*4], 1
         jmp     .store_name
 .set_M:
-        mov     dword [characters + edi*4], 2
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx + edi*4], 2
         jmp     .store_name
 .set_Y:
-        mov     dword [characters + edi*4], 3
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx + edi*4], 3
         jmp     .store_name
 .set_default:
-        mov     dword [characters + edi*4], 0
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx + edi*4], 0
         jmp     .store_name
 
 .no_colon:
-        mov     dword [characters + edi*4], 0
+        mov     ebx, [ebp - 8]
+        mov     dword [ebx + edi*4], 0
 
 .store_name:
-        mov     ebx, names
-        mov     [ebx + edi*4], eax    ; names[edi] = pointer to NUL-terminated name
+        mov     ebx, [ebp - 4]
+        mov     [ebx + edi*4], eax
         add     esi, 4
         inc     edi
         jmp     .get_players_loop
@@ -233,8 +244,8 @@ atoi:
         ret
 
 game_main:
-        push    dword characters ; pass the characters array pointer
-        push    dword names      ; pass the names array pointer
+        push    dword [ebp - 8] ; pass the characters array pointer
+        push    dword [ebp - 4] ; pass the names array pointer
         push    dword [count]      ; pass the player count
         call    init_game
         add     esp, 12 ; clean up the stack after the call
