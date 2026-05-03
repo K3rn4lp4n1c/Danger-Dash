@@ -46,5 +46,10 @@
 # Binary data files
 *.bin
 
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+
 # Danger Dash package
 danger-dash
