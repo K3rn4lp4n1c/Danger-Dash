@@ -166,6 +166,7 @@ asm_main:
 .print_version:
         mov     eax, GAME_VERSION
         call    print_string
+        call    print_nl
         jmp     asm_end
 
 .test:

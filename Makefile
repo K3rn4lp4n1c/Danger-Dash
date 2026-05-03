@@ -8,7 +8,7 @@ SRC_DIR := src
 CFLAGS := -no-pie -g -m32 -znoexecstack
 NASM_FLAGS := -f elf -F dwarf -g
 NASM_FLAGS_32 := -f elf32 -d ELF_TYPE -g -F dwarf
-PROD ?= false
+PROD ?= true
 
 OBJS := asm_io.o driver.o $(PROJECT_FILE_PREFIX).o
 PKGS := nasm gcc make gcc-multilib libc6-dev-i386 lib32gcc-s1 lib32ncurses-dev libasound2t64:i386 libpulse0:i386
@@ -20,7 +20,7 @@ else
   TARGET := $(PROJECT_FILE_PREFIX).out
 endif
 
-.PHONY: all install clean test
+.PHONY: all install clean test submission
 
 all: $(TARGET)
 
@@ -42,6 +42,12 @@ test: $(TARGET)
 >ldd ./$(TARGET) | tee /tmp/$(TARGET).ldd
 >! grep -q 'not found' /tmp/$(TARGET).ldd || { echo "error: one or more runtime libraries are missing"; exit 1; }
 >TERM=xterm ./$(TARGET) test
+
+submission:
+>cp src/game.asm danger-dash.txt
+>echo "" > readme.txt
+>zip -r submission.zip danger-dash.txt readme.txt Makefile src/ inc/ screenshots/ assets/
+>rm -f danger-dash.txt readme.txt
 
 $(PROJECT_FILE_PREFIX).out: $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
 >gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $@
