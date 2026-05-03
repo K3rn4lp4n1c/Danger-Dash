@@ -875,7 +875,7 @@ void helloWorld(void) {
         }
     }
 
-    printf("[CHECK] sound effect assets...\n");
+    printf("\n[CHECK] sound effect assets...\n");
     for (size_t i = 0; i < sizeof(SOUND_EFFECTS) / sizeof(SOUND_EFFECTS[0]); i++) {
         printf("  - %s ... ", SOUND_EFFECTS[i]);
         if (access(SOUND_EFFECTS[i], R_OK) == 0) {
