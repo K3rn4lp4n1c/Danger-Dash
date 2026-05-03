@@ -544,7 +544,12 @@ void* __player_effect__(void *arg) {
             break;
     }
 
-    if (new_yx == NULL) return NULL;
+    if (new_yx == NULL) {
+        pthread_mutex_lock(&player->lock);
+        if (player->state == BUSY) player->state = ACTIVE;
+        pthread_mutex_unlock(&player->lock);
+        return NULL;
+    }
     move_player(new_yx, key, start_y, start_x, lines, cols);
     if (new_yx == NULL) {
         pthread_mutex_lock(&player->lock);
@@ -621,20 +626,17 @@ int __audio_init__(Audio *audio, const char *music_path) {
     ma_result result;
 
     if (audio == NULL) return -1;
-    FILE *file = fopen(LOG_FILE, "a");
 
     result = ma_engine_init(NULL, &audio->engine);
     if (result != MA_SUCCESS) {
-        fprintf(file, "ma_engine_init failed: %s\n", ma_result_description(result));
-        fclose(file);
+        fprintf(stderr, "ma_engine_init failed: %s\n", ma_result_description(result));
         return -1;
     }
 
     audio->music_loaded = 0;
 
     if (music_path == NULL) {
-        fprintf(file, "No music path provided.\n");
-        fclose(file);
+        fprintf(stderr, "No music path provided.\n");
         return 0;
     }
 
@@ -645,9 +647,8 @@ int __audio_init__(Audio *audio, const char *music_path) {
                                      NULL,
                                      &audio->music);
     if (result != MA_SUCCESS) {
-        fprintf(file, "ma_sound_init_from_file('%s') failed: %s\n",
+        fprintf(stderr, "ma_sound_init_from_file('%s') failed: %s\n",
                 music_path, ma_result_description(result));
-                fclose(file);
         return -2;
     }
 
@@ -655,8 +656,7 @@ int __audio_init__(Audio *audio, const char *music_path) {
     ma_sound_set_volume(&audio->music, 1.0f);   /* debug at full volume first */
     audio->music_loaded = 1;
 
-    fprintf(file, "Loaded audio OK: %s\n", music_path);
-    fclose(file);
+    fprintf(stderr, "Loaded audio OK: %s\n", music_path);
     return 0;
 }
 

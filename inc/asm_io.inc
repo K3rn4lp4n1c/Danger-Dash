@@ -2,7 +2,8 @@
         extern  read_char, print_char, print_nl
         extern  sub_dump_regs, sub_dump_mem, sub_dump_math, sub_dump_stack
         ; exposes the read_int, print_int, etc. functions to files that include it
-        extern  hello_world     ; [NOOBS] add more nasm functions to call from C here
+        ; [NOOBS] add more nasm functions to call from C here
+        extern  hello_world, GAME_VERSION
         extern  init_game, update_game, run_game, end_game, deinit_game, curses_getch
 %macro  dump_regs 1
         push      dword %1

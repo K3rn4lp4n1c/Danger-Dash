@@ -38,6 +38,7 @@
   %define _putchar    putchar
   ; _scanf, _printf, are just scanf, printf, etc. without underscores so we don't have conflicts 
   ; [NOOBS] add more defines here for C functions to call from nasm
+  ;%define _GAME_VERSION GAME_VERSION
   %define _init         init
   %define _update       update
   %define _run          run
@@ -56,6 +57,7 @@
   %define _getchar    getchar_
   %define _putchar    putchar_
   ; [NOOBS] add more defines here for C functions to call from nasm
+  ;%define _GAME_VERSION GAME_VERSION_
   %define _init         init_
   %define _update       update_
   %define _run          run_
@@ -111,11 +113,14 @@ segment .text
         global  print_char, print_nl, sub_dump_regs, sub_dump_mem
         global  sub_dump_math, sub_dump_stack
         ; exposes the read_int, print_int, etc. functions to game.asm
-        global  hello_world     ; [NOOBS] add more NASM functions to call from C here
+        ; [NOOBS] add more NASM symbols to call from C here
+        global  hello_world
         global  init_game, update_game, run_game, end_game, deinit_game, curses_getch
+
         extern  _scanf, _printf, _getchar, _putchar
         ; from the %ifdef ELF_TYPE, this is just scanf, printf, etc. without underscores
-        extern  _helloWorld     ; [NOOBS] add more C functions to call from nasm here
+        ; [NOOBS] add more C symbols to call from nasm here
+        extern  _helloWorld
         extern  _init, _update, _run, _displace, _end, _deinit, _curses_getch
 
 ; function_name_in_assembly_that returns Game*:

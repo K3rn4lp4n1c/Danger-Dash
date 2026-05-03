@@ -3,7 +3,8 @@
 segment .data
         game_args     dq "help", "version", "players", "test"
         help_message  db "Usage: danger-dash [options]", 10, 0
-        version_msg   db "Danger Dash v0.0.1-beta", 10, 0
+        GAME_TITLE   db "Danger Dash", 10, 0
+        GAME_VERSION db "0.9.9-beta", 10, 0
         play_err_msg  db "Error: Invalid player arguments. Usage: danger-dash players <count> <name:char> ...", 10, 0
         default_name  db "John Doe", 0
 
@@ -19,6 +20,8 @@ segment .text
         global  asm_main
         global  check_for_collision
         global  move_player
+        global  GAME_TITLE
+        global  GAME_VERSION
 
 asm_main:
         push    ebp
@@ -84,7 +87,7 @@ asm_main:
         ret
 
 .print_version:
-        mov     eax, version_msg
+        mov     eax, GAME_VERSION
         call    print_string
         jmp     asm_end
 
@@ -93,15 +96,17 @@ asm_main:
         jmp     asm_end
 
 .get_players:
-        ; ./game.out players 2 "Alice:B" "Bob:E" ...
+        ; ./game.out players 2 Alice:B Bob:E ...
         mov     eax, [argv]
         add     eax, 8 ; skip program name and first argument
-        mov     eax, [eax]
-        movzx   ecx, byte [eax] ; get player count argument
-        sub     ecx, '0' ; convert from ASCII to int
-        cmp     ecx, 0
+        mov     eax, [eax] ; get player count argument
+        mov     edx, eax
+        call    atoi
+        call    print_int
+        call    print_nl
+        cmp     eax, 0
         jle     .get_players_err ; player count must be > 0
-        mov     [count], ecx ; store player count
+        mov     [count], eax ; store player count
 
         mov     esi, [argv]
         add     esi, 12 ; skip program name and first two arguments
@@ -185,6 +190,22 @@ asm_end:
         mov     eax, 0
         mov     esp, ebp
         pop     ebp
+        ret
+
+atoi:
+        xor     eax, eax
+.loop:
+        movzx   ecx, byte [edx]
+        inc     edx
+        cmp     ecx, '0'
+        jb      .done
+        cmp     ecx, '9'
+        ja      .done
+        sub     ecx, '0'
+        imul    eax, 10
+        add     eax, ecx
+        jmp     .loop
+.done:
         ret
 
 game_main:

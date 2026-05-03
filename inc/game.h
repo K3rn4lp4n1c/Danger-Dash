@@ -17,8 +17,8 @@
 #include "miniaudio.h"
 
 #define WELCOME_MSG "Hello World!"
-#define GAME_TITLE "Danger Dash"
-#define GAME_VERSION "0.0.1-alpha"
+extern char GAME_TITLE[];
+extern char GAME_VERSION[];
 #define MAX_PLAYERS 4
 #define MAX_PREDECESSORS 5
 #define MAX_NAME_LENGTH 20
