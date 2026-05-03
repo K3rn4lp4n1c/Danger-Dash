@@ -4,7 +4,7 @@ segment .data
         char1_music db "assets/benjamin.mp3", 0
         char2_music db "assets/ethan.mp3", 0
         char3_music db "assets/muhammad.mp3", 0
-        char4_music db "assets/youssef.mp3", 0
+        char4_music db "assets/muhammad.mp3", 0
         char1_sfx   db "assets/victory.mp3", 0
         char2_sfx   db "assets/smokeweed.mp3", 0
         char3_sfx   db "assets/kaboom.mp3", 0
