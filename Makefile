@@ -46,7 +46,7 @@ test: $(TARGET)
 >TERM=xterm ./$(TARGET) test
 
 submission: $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
->gcc $(CFLAGS) -DDISABLE_AUDIO $^ -I $(INC_DIR) -L$(LIB_DIR) -l:libncursesw.so.6 -l:libtinfo.so.6 -lpthread -lm -ldl -o $(PROJECT_NAME)
+>gcc $(CFLAGS) -DDISABLE_AUDIO $^ -I $(INC_DIR) -L$(LIB_DIR) -l:libncursesw.so.6 -l:libtinfo.so.6 -lpthread -lm -ldl $(RPATH) -o $(PROJECT_NAME)
 >cp src/game.asm danger-dash.txt
 >zip -r danger-dash.zip danger-dash.txt readme.txt Makefile src/ inc/ screenshots/ assets/
 
