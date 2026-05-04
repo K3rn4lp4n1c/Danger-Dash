@@ -14,7 +14,7 @@ PROD ?= true
 
 OBJS := asm_io.o driver.o $(PROJECT_FILE_PREFIX).o
 PKGS := nasm gcc make gcc-multilib libc6-dev-i386 lib32gcc-s1 lib32ncurses-dev libasound2t64:i386 libpulse0:i386
-LIBS := -lncursesw -ltinfo -lpthread -lm -ldl
+LIBS := -L$(LIB_DIR) -l:libncursesw.so.6 -l:libtinfo.so.6 -lpthread -lm -ldl
 
 ifeq ($(PROD),true)
   TARGET := $(PROJECT_NAME)
