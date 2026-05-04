@@ -35,11 +35,64 @@ typedef struct {
     int music_loaded;
 } Audio;
 
-int __audio_init__(Audio *audio, const char *music_path);
-void __audio_play_sfx__(Audio *audio, const char *path);
-void __audio_start_music__(Audio *audio);
-void __audio_stop_music__(Audio *audio);
-void __audio_shutdown__(Audio *audio);
+int __audio_init__(Audio *audio, const char *music_path) {
+    ma_result result;
+
+    if (audio == NULL) return -1;
+
+    result = ma_engine_init(NULL, &audio->engine);
+    if (result != MA_SUCCESS) {
+        fprintf(stderr, "ma_engine_init failed: %s\n", ma_result_description(result));
+        return -1;
+    }
+
+    audio->music_loaded = 0;
+
+    if (music_path == NULL) {
+        fprintf(stderr, "No music path provided.\n");
+        return 0;
+    }
+
+    result = ma_sound_init_from_file(&audio->engine,
+                                     music_path,
+                                     0,   /* for debugging, do not stream yet */
+                                     NULL,
+                                     NULL,
+                                     &audio->music);
+    if (result != MA_SUCCESS) {
+        fprintf(stderr, "ma_sound_init_from_file('%s') failed: %s\n",
+                music_path, ma_result_description(result));
+        return -2;
+    }
+
+    ma_sound_set_looping(&audio->music, MA_TRUE);
+    ma_sound_set_volume(&audio->music, 1.0f);   /* debug at full volume first */
+    audio->music_loaded = 1;
+
+    fprintf(stderr, "Loaded audio OK: %s\n", music_path);
+    return 0;
+}
+
+void __audio_play_sfx__(Audio *audio, const char *path){
+    if (audio == NULL || path == NULL) return;
+    ma_engine_play_sound(&audio->engine, path, NULL);
+}
+
+void __audio_start_music__(Audio *audio) {
+    if (audio != NULL && audio->music_loaded) {
+        ma_sound_start(&audio->music);
+    }
+}
+
+void __audio_stop_music__(Audio *audio) {
+    if (audio != NULL && audio->music_loaded) ma_sound_stop(&audio->music);
+}
+
+void __audio_shutdown__(Audio *audio) {
+    if (audio == NULL) return;
+    if (audio->music_loaded) ma_sound_uninit(&audio->music);
+    ma_engine_uninit(&audio->engine);
+}
 #endif
 
 extern const char GAME_TITLE[];
