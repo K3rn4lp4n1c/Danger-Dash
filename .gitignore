@@ -42,6 +42,7 @@
 
 # Log files
 *.log
+*.txt
 
 # Binary data files
 *.bin
