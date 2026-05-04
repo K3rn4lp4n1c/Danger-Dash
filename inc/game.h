@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
-#include <errno.h>
 #include <locale.h>
 #include <wchar.h>
 #include <ncursesw/curses.h>

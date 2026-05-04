@@ -4,8 +4,10 @@ PROJECT_FILE_PREFIX := game
 
 INC_DIR := inc
 SRC_DIR := src
+LIB_DIR := lib
 
 CFLAGS := -no-pie -g -m32 -znoexecstack
+RPATH := -Wl,-rpath,$$ORIGIN/$(LIB_DIR)
 NASM_FLAGS := -f elf -F dwarf -g
 NASM_FLAGS_32 := -f elf32 -d ELF_TYPE -g -F dwarf
 PROD ?= true
@@ -30,7 +32,7 @@ install:
 >sudo apt-get install -y $(PKGS)
 
 clean:
->rm -rf $(PROJECT_NAME) $(PROJECT_FILE_PREFIX).out $(TARGET) $(OBJS)
+>rm -rf $(PROJECT_NAME) $(PROJECT_FILE_PREFIX).out $(OBJS)
 
 test: $(TARGET)
 >test -f ./$(TARGET) || { echo "error: $(TARGET) was not built"; exit 1; }
@@ -43,7 +45,8 @@ test: $(TARGET)
 >! grep -q 'not found' /tmp/$(TARGET).ldd || { echo "error: one or more runtime libraries are missing"; exit 1; }
 >TERM=xterm ./$(TARGET) test
 
-submission:
+submission: $(OBJS) $(SRC_DIR)/$(PROJECT_FILE_PREFIX).c
+>gcc $(CFLAGS) $^ -I $(INC_DIR) $(LIBS) -o $(PROJECT_NAME)
 >cp src/game.asm danger-dash.txt
 >echo "I built a 32-bit Linux terminal runner game called Danger Dash using both C and x86 assembly. The program uses assembly for command parsing, movement logic, and collision handling, while C manages the game loop, terminal rendering with ncurses, audio playback, score tracking, and runtime testing. Players can launch the game in different modes, move through a scrolling obstacle course, and try to survive as long as possible for a higher score. This project demonstrates low-level programming, C and assembly interoperability, terminal UI design, and basic game systems development." > readme.txt
 >zip -r danger-dash.zip danger-dash.txt readme.txt Makefile src/ inc/ screenshots/ assets/
