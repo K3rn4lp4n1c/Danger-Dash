@@ -13,7 +13,34 @@
 #include <locale.h>
 #include <wchar.h>
 #include <ncursesw/curses.h>
+
+#if defined(DISABLE_AUDIO)
+typedef struct { int dummy; } Audio;
+typedef struct { int dummy; } ma_decoder;
+typedef int ma_result;
+#define MA_SUCCESS 0
+static inline int __audio_init__(Audio *audio, const char *music_path) { return 0; }
+static inline void __audio_play_sfx__(Audio *audio, const char *path) {}
+static inline void __audio_start_music__(Audio *audio) {}
+static inline void __audio_stop_music__(Audio *audio) {}
+static inline void __audio_shutdown__(Audio *audio) {}
+static inline ma_result ma_decoder_init_file(const char *filename, void *config, ma_decoder *decoder) { ma_result a; return a; }
+static inline void ma_decoder_uninit(ma_decoder *decoder) {}
+static inline char* ma_result_description(ma_result result) { return "Audio disabled"; }
+#else
 #include "miniaudio.h"
+typedef struct {
+    ma_engine engine;
+    ma_sound music;
+    int music_loaded;
+} Audio;
+
+int __audio_init__(Audio *audio, const char *music_path);
+void __audio_play_sfx__(Audio *audio, const char *path);
+void __audio_start_music__(Audio *audio);
+void __audio_stop_music__(Audio *audio);
+void __audio_shutdown__(Audio *audio);
+#endif
 
 extern const char GAME_TITLE[];
 extern const char GAME_VERSION[];
@@ -37,12 +64,6 @@ typedef enum { Benjamin, Ethan, Muhammad, Youssef, } Characters;
 typedef enum { INACTIVE, ACTIVE, IDLE, BUSY, } States;
 
 const double OBSTACLE_ODDS = 0.01; // 1% chance of new obstacle each frame
-
-typedef struct {
-    ma_engine engine;
-    ma_sound music;
-    int music_loaded;
-} Audio;
 
 typedef struct {
     char name[MAX_NAME_LENGTH];
@@ -97,10 +118,4 @@ void __erase_all_windows__(Environment *);
 void* __keypress__(void *), *__player_effect__(void *);
 
 const wchar_t* __resolve_character__(Characters*);
-
-int __audio_init__(Audio *audio, const char *music_path);
-void __audio_play_sfx__(Audio *audio, const char *path);
-void __audio_start_music__(Audio *audio);
-void __audio_stop_music__(Audio *audio);
-void __audio_shutdown__(Audio *audio);
 #endif

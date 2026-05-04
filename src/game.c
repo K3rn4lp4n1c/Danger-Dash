@@ -1,4 +1,6 @@
+#if !defined(DISABLE_AUDIO)
 #define MINIAUDIO_IMPLEMENTATION
+#endif
 
 #include "game.h"
 
